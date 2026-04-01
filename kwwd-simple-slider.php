@@ -3,22 +3,22 @@
  * Plugin Name: Simple Slider by KWWD
  * Plugin URI:  https://www.kwwdoc.uk/blog/Simple-Slider
  * Description: Custom image carousel slider with URL Shortify integration.
- * Version:     1.1.6
+ * Version:     1.1.7
  * Author:      KWWD
  * License:     GPL3
  * Licence URI: https://www.gnu.org/licenses/gpl-3.0.html
  * Requires at least: 6.0
- * Requires PHP: 7.4
- * Update URI: https://raw.githubusercontent.com/KWWDCoding/kwwd-yamtrack-sync-for-wp/main/assets/';
+ * Requires PHP: 8.0
+ * Update URI: https://raw.githubusercontent.com/KWWDCoding/kwwd-simple-slider-for-wp/main/assets/';
  */
 
 defined('ABSPATH') || exit;
-define('KWWDSlider_SLIDER_VERSION', '1.1.6');
+define('KWWDSlider_SLIDER_VERSION', '1.1.7');
 /**************************************************************
  * UPDATE CHECKER (GITHUB Method)
  *************************************************************/
 // Use the RAW content URL from GitHub
-$githubAssets = 'https://raw.githubusercontent.com/KWWDCoding/kwwd-yamtrack-sync-for-wp/main/assets/';
+$githubAssets = 'https://raw.githubusercontent.com/KWWDCoding/kwwd-simple-slider-for-wp/main/assets/';
 
 require_once plugin_dir_path(__FILE__) . 'includes/plugin-update-checker/plugin-update-checker.php';
 use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
