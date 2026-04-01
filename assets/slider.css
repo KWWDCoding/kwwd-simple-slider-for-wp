@@ -1,0 +1,141 @@
+.kwwd-slider-wrap {
+    width: 100%;
+    margin: 1rem 0 1.5rem;
+    position: relative;
+    background: var(--kwwd-bg, #f9f9f9);
+    border: var(--kwwd-border, none);
+    border-radius: var(--kwwd-br, 0);
+    padding: .4rem .75rem .6rem;
+    box-sizing: border-box;
+}
+
+/* Kill any theme margin/padding on children inside wrap */
+.kwwd-slider-wrap > *:first-child,
+.kwwd-slider-wrap .swiper:first-child,
+.kwwd-slider-wrap > .swiper {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* Kill theme paragraph/heading margins that inflate the top */
+.kwwd-slider-wrap .swiper-wrapper {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* ── Title ───────────────────────────────────────────────────────────────── */
+.kwwd-slider-title {
+    margin: 0 0 .3rem !important;
+    padding: 0;
+    font-size: 1.1rem;
+    /*line-height: 1.3;*/
+}
+
+/** SUBTITLE **/
+
+.kwwd-slider-subtitle {
+    font-style: italic;
+    font-weight: 400;
+    font-size: 0.75em !important;
+    line-height: 1.1em !important;
+    color: #777;
+    margin: 0 0 .2rem !important;
+    }
+
+/* ── Swiper container ────────────────────────────────────────────────────── */
+.kwwd-slider-wrap .swiper {
+    width: 100%;
+   /* padding-bottom: 2rem !important;*/
+}
+
+/* ── Individual slide ────────────────────────────────────────────────────── */
+.kwwd-slide {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 10px;
+}
+
+.kwwd-slide a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
+    outline: none;
+    transition: opacity .2s ease, transform .2s ease;
+}
+
+.kwwd-slide a:hover {
+    opacity: .85;
+    transform: translateY(-2px);
+    text-decoration: none !important;
+    border-bottom: none !important;
+}
+
+/* Fixed height images — all same height, width auto to preserve aspect ratio */
+.kwwd-slide img {
+    display: block;
+    width: auto;
+    height: 225px;
+    max-width: 100%;
+    /*object-fit: contain;*/
+    border: var(--kwwd-slide-border, none);
+    border-radius: var(--kwwd-slide-br, 4px);
+    /*box-shadow: 0 2px 8px rgba(0,0,0,.15);*/
+    padding: 8px;
+}
+
+/* ── Caption ─────────────────────────────────────────────────────────────── */
+
+.kwwd-caption,
+.kwwd-slide a .kwwd-caption,
+.kwwd-slide a:hover .kwwd-caption {
+    display: block;
+    margin: .3rem 0 0;
+    padding: 0;
+    text-align: center;
+    color: #555;
+    line-height: 1.3;
+    /* Kill every possible way a theme could underline this */
+    text-decoration: none !important;
+    border-bottom: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: none;
+    font-weight: 900;
+    font-size: 0.95rem !important;
+}
+
+/* ── Navigation arrows — coloured circle, white chevron ─────────────────── */
+.kwwd-slider-wrap .swiper-button-prev,
+.kwwd-slider-wrap .swiper-button-next {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    background-color: var(--kwwd-arrow, #e72153);
+    box-shadow: 0 1px 4px rgba(0,0,0,.25);
+    color: #fff;            /* white chevron */
+}
+
+.kwwd-slider-wrap .swiper-button-prev::after,
+.kwwd-slider-wrap .swiper-button-next::after {
+    font-size: .75rem;
+    font-weight: 900;
+    color: #fff;
+}
+
+/* ── Pagination dots ─────────────────────────────────────────────────────── */
+.kwwd-slider-wrap .swiper-pagination {
+    bottom: 0 !important;
+}
+
+.kwwd-slider-wrap .swiper-pagination-bullet {
+    background: var(--kwwd-dot-light, #f76b8f);
+    opacity: 1;
+}
+
+.kwwd-slider-wrap .swiper-pagination-bullet-active {
+    background: var(--kwwd-dot, #e72153);
+}
