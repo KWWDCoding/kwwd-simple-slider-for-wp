@@ -3,7 +3,7 @@
  * Plugin Name: Simple Slider by KWWD
  * Plugin URI:  https://www.kwwdoc.uk/blog/Simple-Slider
  * Description: Custom image carousel slider with URL Shortify integration.
- * Version:     1.1.7
+ * Version:     1.1.8
  * Author:      KWWD
  * License:     GPL3
  * Licence URI: https://www.gnu.org/licenses/gpl-3.0.html
@@ -13,7 +13,7 @@
  */
 
 defined('ABSPATH') || exit;
-define('KWWDSlider_SLIDER_VERSION', '1.1.7');
+define('KWWDSlider_SLIDER_VERSION', '1.1.8');
 /**************************************************************
  * UPDATE CHECKER (GITHUB Method)
  *************************************************************/
@@ -24,9 +24,9 @@ require_once plugin_dir_path(__FILE__) . 'includes/plugin-update-checker/plugin-
 use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
 
 $myUpdateChecker = PucFactory::buildUpdateChecker(
-    'https://github.com/KWWDCoding/kwwd-yamtrack-sync-for-wp/',
+    'https://github.com/KWWDCoding/kwwd-simple-slider-for-wp/',
     __FILE__,
-    'kwwd-yamtrack-sync-for-wp'
+    'kwwd-simple-slider-for-wp'
 );
 // Since you're using GitHub's "Releases" feature to host the ZIPs:
 $myUpdateChecker->getVcsApi()->enableReleaseAssets();
