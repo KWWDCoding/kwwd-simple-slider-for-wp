@@ -269,26 +269,12 @@ function KWWDSlider_create_short_url($dest_url, $title = '') {
             $slug = 'slide-' . substr(md5($dest_url), 0, 6);
         }
         
-        // You may need to adjust this based on your URL Shortify implementation
         // This is a placeholder that returns a formatted slug
         return $slug;
     }
     
-    // If URL Shortify plugin is active, use its API
-    // Adjust this based on your actual URL Shortify plugin's API
-    // Example implementation:
-    /*
-    $shortify_result = url_shortify_create_link([
-        'url' => $dest_url,
-        'title' => $title
-    ]);
     
-    if ($shortify_result && isset($shortify_result['slug'])) {
-        return $shortify_result['slug'];
-    }
-    */
-    
-    // For now, return a simple slug
+    // Return a simple slug for the shortlink
     $slug = sanitize_title($title);
     if (empty($slug)) {
         $slug = 'slide-' . substr(md5($dest_url), 0, 6);
