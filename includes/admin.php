@@ -276,28 +276,7 @@ function KWWDSlider_process_csv_upload($slider_id, $file) {
     return $result;
 }
 
-function KWWDSlider_create_short_url($dest_url, $title = '') {
-    // Check if URL Shortify plugin is active
-    if (!function_exists('WORDPRESS_PLUGIN_URL_SHORTIFY')) {
-        // Fallback: create a simple slug from title
-        $slug = sanitize_title($title);
-        if (empty($slug)) {
-            $slug = 'slide-' . substr(md5($dest_url), 0, 6);
-        }
-        
-        // This is a placeholder that returns a formatted slug
-        return $slug;
-    }
-    
-    
-    // Return a simple slug for the shortlink
-    $slug = sanitize_title($title);
-    if (empty($slug)) {
-        $slug = 'slide-' . substr(md5($dest_url), 0, 6);
-    }
-    
-    return $slug;
-}
+
 
 // ── AJAX: Reorder ─────────────────────────────────────────────────────────────
 
