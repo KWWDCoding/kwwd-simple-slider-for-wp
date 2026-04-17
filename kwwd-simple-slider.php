@@ -3,7 +3,7 @@
  * Plugin Name: Simple Slider by KWWD
  * Plugin URI:  https://www.kwwdoc.uk/blog/Simple-Slider
  * Description: Custom image carousel slider with URL Shortify integration.
- * Version:     1.1.8
+ * Version:     1.1.9
  * Author:      KWWD
  * License:     GPL3
  * Licence URI: https://www.gnu.org/licenses/gpl-3.0.html
@@ -13,7 +13,7 @@
  */
 
 defined('ABSPATH') || exit;
-define('KWWDSlider_SLIDER_VERSION', '1.1.8');
+define('KWWDSlider_SLIDER_VERSION', '1.1.9');
 /**************************************************************
  * UPDATE CHECKER (GITHUB Method)
  *************************************************************/
@@ -32,7 +32,7 @@ $myUpdateChecker = PucFactory::buildUpdateChecker(
 $myUpdateChecker->getVcsApi()->enableReleaseAssets();
 
 /** PLUGIN ICONS ***/
-$myUpdateChecker->addResultFilter(function($info) {
+$myUpdateChecker->addResultFilter(function($info) use ($githubAssets) {
     if ($info) {
         $info->icons = array(
             '1x'      => $githubAssets . 'icon-128x128.png',

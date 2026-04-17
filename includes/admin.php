@@ -1,7 +1,7 @@
 <?php
 defined('ABSPATH') || exit;
 
-// ── Admin Menu ────────────────────────────────────────────────────────────────
+/** Admin Menu **/
 
 add_action('admin_menu', 'KWWDSlider_slider_admin_menu');
 
@@ -12,10 +12,10 @@ function KWWDSlider_slider_admin_menu() {
         'manage_options',
         'kwwd-slider',
         'KWWDSlider_slider_page',
-        'dashicons-images-alt2',
+        'dashicons-format-gallery',
         30
     );
-    // Keep the top-level item visible as "All Sliders" in the submenu
+    /** Keep the top-level item visible as "All Sliders" in the submenu **/
     add_submenu_page(
         'kwwd-slider',
         'All Sliders',
@@ -26,13 +26,33 @@ function KWWDSlider_slider_admin_menu() {
     );
 }
 
-// ── Admin Page Router ─────────────────────────────────────────────────────────
+/** Admin Page Router **/
 
 function KWWDSlider_slider_page() {
     $action = $_GET['action'] ?? 'list';
     $id     = (int) ($_GET['slider_id'] ?? 0);
 
-    // Handle POST actions
+    // Render views
+    match ($action) {
+        'edit'   => KWWDSlider_view_edit_slider($id),
+        'new'    => KWWDSlider_view_edit_slider(0),
+        'slide'  => KWWDSlider_view_edit_slide($id, (int) ($_GET['slide_id'] ?? 0)),
+        default  => KWWDSlider_view_list(),
+    };
+}
+
+/******************************************************
+ * Save/Edit/Delete slider function
+ ******************************************************/
+add_action('admin_init', 'KWWDSlider_handle_admin_actions');
+
+function KWWDSlider_handle_admin_actions() {
+    // Only run if our specific action is set and we are in the admin
+    if (!isset($_POST['KWWDSlider_action']) || !is_admin()) {
+        return;
+    }
+
+// Handle POST actions
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && check_admin_referer('KWWDSlider_slider_action')) {
         $action_post = $_POST['KWWDSlider_action'] ?? '';
 
@@ -81,17 +101,13 @@ function KWWDSlider_slider_page() {
             exit;
         }
     }
-
-    // Render views
-    match ($action) {
-        'edit'   => KWWDSlider_view_edit_slider($id),
-        'new'    => KWWDSlider_view_edit_slider(0),
-        'slide'  => KWWDSlider_view_edit_slide($id, (int) ($_GET['slide_id'] ?? 0)),
-        default  => KWWDSlider_view_list(),
-    };
+    
 }
 
-// ── AJAX: Reorder ─────────────────────────────────────────────────────────────
+
+/******************************************************
+ * Allow AJAX reordering of slides
+ *****************************************************/
 
 add_action('wp_ajax_KWWDSlider_reorder_slides', 'KWWDSlider_ajax_reorder_slides');
 
@@ -103,7 +119,10 @@ function KWWDSlider_ajax_reorder_slides() {
     wp_send_json_success();
 }
 
-// ── AJAX: Toggle Active ───────────────────────────────────────────────────────
+
+/******************************************************
+ * AJAX Toggle slide visibility on/off
+ *****************************************************/
 
 add_action('wp_ajax_KWWDSlider_toggle_slide', 'KWWDSlider_ajax_toggle_slide');
 
@@ -114,7 +133,10 @@ function KWWDSlider_ajax_toggle_slide() {
     wp_send_json_success();
 }
 
-// ── Views ─────────────────────────────────────────────────────────────────────
+
+/******************************************************
+ * Page views
+ *****************************************************/
 
 function KWWDSlider_view_list() {
     global $wpdb;
@@ -124,7 +146,7 @@ function KWWDSlider_view_list() {
     $offset      = ($current_page - 1) * $per_page;
     $search      = sanitize_text_field(wp_unslash($_GET['s'] ?? ''));
 
-    // ── Slider list with pagination ───────────────────────────────────────────
+    /** Slider list with pagination **/
     $total_sliders = (int) $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}KWWDSlider_sliders");
     $total_pages   = max(1, (int) ceil($total_sliders / $per_page));
     $sliders       = $wpdb->get_results($wpdb->prepare(
@@ -132,7 +154,7 @@ function KWWDSlider_view_list() {
         $per_page, $offset
     ));
 
-    // ── Slide search ──────────────────────────────────────────────────────────
+    /**Slide search **/
     $search_results = [];
     if ($search !== '') {
         $like = '%' . $wpdb->esc_like($search) . '%';
@@ -151,7 +173,7 @@ function KWWDSlider_view_list() {
     $base_url = admin_url('admin.php?page=kwwd-slider');
     ?>
     <div class="wrap kwwd-admin">
-        <h1 class="wp-heading-inline">WKRN Sliders</h1>
+        <h1 class="wp-heading-inline">Simple Sliders by KWWD</h1>
         <a href="<?= admin_url('admin.php?page=kwwd-slider&action=new') ?>" class="page-title-action">Add New</a>
 
         <?php if (isset($_GET['deleted'])): ?>
@@ -286,7 +308,7 @@ function KWWDSlider_view_list() {
                         <span style="color:#888" title="Using per-slider settings">⚙️ Custom</span>
                         <?php endif; ?>
                     </td>
-                    <td><code>[KWWDSlider_slider id="<?= (int) $slider->id ?>"]</code></td>
+                    <td><code>[simple_slider id="<?= (int) $slider->id ?>"]</code></td>
                     <td>
                         <a href="<?= admin_url('admin.php?page=kwwd-slider&action=edit&slider_id=' . $slider->id) ?>">Edit</a>
                         &nbsp;|&nbsp;
@@ -363,7 +385,7 @@ function KWWDSlider_view_edit_slider(int $id) {
                                     <th><label for="name">Slider Name</label></th>
                                     <td><input type="text" id="name" name="name" class="regular-text" value="<?= esc_attr($slider->name ?? '') ?>" required></td>
                                 </tr>
-                                <!-- ── Use Global Settings toggle ─────────── -->
+                                <!-- ── Use Global Settings toggle **/ -->
                                 <tr>
                                     <th><label for="use_global">Use Global Settings</label></th>
                                     <td>
@@ -474,7 +496,7 @@ function KWWDSlider_view_edit_slider(int $id) {
                                         <th><label for="effect">Transition Effect</label></th>
                                         <td>
                                             <select id="effect" name="effect">
-                                                <?php foreach (['slide'=>'Slide','fade'=>'Fade','coverflow'=>'Coverflow','flip'=>'Flip'] as $val => $label): ?>
+                                                <?php foreach (['slide'=>'Slide','fade'=>'Fade','coverflow'=>'Coverflow','flip'=>'Flip','cards'=>'Cards','cube'=>'Cube','creative'=>'Creative'] as $val => $label): ?>
                                                 <option value="<?= $val ?>" <?= ($slider->effect ?? 'slide') === $val ? 'selected' : '' ?>><?= $label ?></option>
                                                 <?php endforeach; ?>
                                             </select>
@@ -560,7 +582,7 @@ function KWWDSlider_view_edit_slider(int $id) {
                         <?php
                         // Shortcode bar — rendered as a reusable PHP variable so we
                         // can drop the same markup at the top and bottom of the list.
-                        $shortcode_text = '[KWWDSlider_slider id="' . $id . '"]';
+                        $shortcode_text = '[simple_slider id="' . $id . '"]';
                         $shortcode_bar  = '<p class="kwwd-shortcode-bar" style="margin:.5rem 0;display:flex;align-items:center;gap:.6rem">'
                             . '<strong>Shortcode:</strong>'
                             . '<code class="kwwd-shortcode-text" style="flex:1;padding:.3rem .5rem;background:#f0f0f0;border:1px solid #ddd;border-radius:3px;cursor:pointer"'
@@ -639,7 +661,7 @@ function KWWDSlider_view_edit_slider(int $id) {
 
     <script>
     (function () {
-        // ── Use Global Settings: hide/show per-slider design fields ───────────
+        /** Use Global Settings: hide/show per-slider design fields **/
         var checkbox = document.getElementById('use_global');
         var panel    = document.getElementById('kwwd-per-slider-settings');
 
@@ -650,7 +672,7 @@ function KWWDSlider_view_edit_slider(int $id) {
         toggle();
         checkbox.addEventListener('change', toggle);
 
-        // ── Shortcode: copy to clipboard on button or code click ──────────────
+        /** Shortcode: copy to clipboard on button or code click **/
         document.addEventListener('click', function (e) {
             // Match either the Copy button or the <code> element itself
             var btn = e.target.closest('.kwwd-copy-shortcode, .kwwd-shortcode-text');
