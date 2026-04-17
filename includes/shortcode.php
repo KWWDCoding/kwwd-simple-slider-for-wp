@@ -1,19 +1,19 @@
 <?php
 defined('ABSPATH') || exit;
 
-add_shortcode('simple_slider', 'KWWDSlider_slider_shortcode');
+add_shortcode('simple_slider', 'KWWD_Slider_shortcode');
 
-function KWWDSlider_slider_shortcode(array $atts): string {
-    $atts   = shortcode_atts(['id' => 0], $atts, 'KWWDSlider_slider');
+function KWWD_Slider_shortcode(array $atts): string {
+    $atts   = shortcode_atts(['id' => 0], $atts, 'simple_slider');
     $id     = (int) $atts['id'];
-    if (!$id) return '<!-- KWWDSlider_slider: no id provided -->';
+    if (!$id) return '<!-- simple_slider_kwwd: no id provided -->';
 
     /********************************************************************************* 
      * Returns the slider row with design fields overridden by global settings
      * if the slider's use_global flag is set — otherwise returns per-slider values.
      *********************************************************************************/
     $slider = KWWDSlider_get_active_slider_settings($id);
-    if (!$slider) return '<!-- KWWDSlider_slider: slider not found -->';
+    if (!$slider) return '<!-- simple_slider_kwwd: slider not found -->';
 
     $slides = array_filter(KWWDSlider_get_slides($id), fn($s) => $s->active);
     if (empty($slides)) return '';

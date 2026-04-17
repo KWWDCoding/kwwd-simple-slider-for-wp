@@ -171,6 +171,30 @@ function KWWDSlider_global_settings_page(): void {
                 </div>
             </div>
 
+            <!-- ** SHORT LINKS ** -->
+
+            <div class="postbox" style="max-width:760px;margin-top:1rem">
+                <div class="postbox-header"><h2>Short Links</h2></div>
+                <div class="inside">
+                    <p class="description" style="margin-bottom:.75rem">This section controls whether Shortlinks are active and what prefix to give your slider links.</p>
+                    <p><strong>Important Note</strong>: If you have specified a link prefix within URL Shortify, this plugin currently ignores this setting and you will need to add it in here separately</p>
+                    <p>If you change the prefix, this will only apply to new Short URLS</p>
+
+                    <table class="form-table" style="margin-top:0">
+                        <tr>
+                            <th><label for="generate-shortlinks">Auto Generate Shortlinks</label></th>
+                            <td><input type="checkbox" id="generate-shortlinks" name="generate-shortlinks" value="1" <?php if((int)$g['generate-shortlinks']===1){echo 'checked';} ?>></td>
+                        </tr>
+                         <tr>
+                            <th><label for="shortlink-prefix">Shortlink Prefix</label></th>
+                            <td><?php echo get_site_url();?>/ <input type="text" id="shortlink-prefix" name="shortlink-prefix" value="<?= esc_attr($g['shortlink-prefix']) ?>"></td>
+                        </tr>
+                        <tr><td colspan="2">Add in a forward slash or a dash if you want to separate the prefix from the link<code>Examples: go/[shortlink] or go/aff-[shortlink] or aff-[shortlink]</code></td></tr>
+        </table>   
+
+                </div>
+            </div>    
+
             <!-- ** Colours ** -->
             <div class="postbox" style="max-width:760px;margin-top:1rem">
                 <div class="postbox-header"><h2>Colours</h2></div>

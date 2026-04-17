@@ -1,13 +1,13 @@
 <?php
 defined('ABSPATH') || exit;
 
-function KWWDSlider_slider_create_tables() {
+function KWWD_Slider_create_tables() {
     global $wpdb;
     $charset = $wpdb->get_charset_collate();
     $p       = $wpdb->prefix;
 
     $wpdb->query(
-        "CREATE TABLE IF NOT EXISTS `{$p}KWWDSlider_sliders` (
+        "CREATE TABLE IF NOT EXISTS `{$p}KWWD_Slider_sliders` (
             `id`              INT UNSIGNED     NOT NULL AUTO_INCREMENT,
             `name`            VARCHAR(255)     NOT NULL,
             `subtitle`        VARCHAR(255)     NOT NULL,
@@ -44,7 +44,7 @@ function KWWDSlider_slider_create_tables() {
 
     /** Global settings: key-value store **/
     $wpdb->query(
-        "CREATE TABLE IF NOT EXISTS `{$p}KWWDSlider_global_settings` (
+        "CREATE TABLE IF NOT EXISTS `{$p}KWWD_Slider_global_settings` (
             `setting_key`   VARCHAR(64)  NOT NULL,
             `setting_value` VARCHAR(512) NOT NULL DEFAULT '',
             PRIMARY KEY (`setting_key`)
@@ -52,7 +52,7 @@ function KWWDSlider_slider_create_tables() {
     );
 
     $wpdb->query(
-        "CREATE TABLE IF NOT EXISTS `{$p}KWWDSlider_slides` (
+        "CREATE TABLE IF NOT EXISTS `{$p}KWWD_Slider_slides` (
             `id`            INT UNSIGNED      NOT NULL AUTO_INCREMENT,
             `slider_id`     INT UNSIGNED      NOT NULL,
             `title`         VARCHAR(255)      NOT NULL,
@@ -110,6 +110,8 @@ function KWWDSlider_global_defaults(): array {
         'pause_on_hover'       => '1',
         'show_arrows'          => '1',
         'show_dots'            => '1',
+        'generate-shortlinks'  => '0',
+        'shortlink-prefix'     => '',
     ];
 }
 
@@ -120,7 +122,7 @@ function KWWDSlider_global_defaults(): array {
 function KWWDSlider_get_global_settings(): array {
     global $wpdb;
     $rows = $wpdb->get_results(
-        "SELECT setting_key, setting_value FROM `{$wpdb->prefix}KWWDSlider_global_settings`",
+        "SELECT setting_key, setting_value FROM `{$wpdb->prefix}KWWD_Slider_global_settings`",
         ARRAY_A
     ) ?: [];
 
@@ -139,7 +141,7 @@ function KWWDSlider_get_global_settings(): array {
  **********************************************************************************/
 function KWWDSlider_save_global_settings(array $raw): void {
     global $wpdb;
-    $tbl = $wpdb->prefix . 'KWWDSlider_global_settings';
+    $tbl = $wpdb->prefix . 'KWWD_Slider_global_settings';
     $d   = KWWDSlider_global_defaults();
 
     $settings = [
@@ -178,6 +180,8 @@ function KWWDSlider_save_global_settings(array $raw): void {
         'pause_on_hover'      => (string)(int) !empty($raw['pause_on_hover']),
         'show_arrows'         => (string)(int) !empty($raw['show_arrows']),
         'show_dots'           => (string)(int) !empty($raw['show_dots']),
+        'generate-shortlinks' => (int)$raw['generate-shortlinks'],
+        'shortlink-prefix'    => $raw['shortlink-prefix'] ?? '',
     ];
 
     foreach ($settings as $key => $value) {
@@ -193,12 +197,12 @@ function KWWDSlider_save_global_settings(array $raw): void {
 /** Sliders **/
 function KWWDSlider_get_sliders(): array {
     global $wpdb;
-    return $wpdb->get_results("SELECT * FROM {$wpdb->prefix}KWWDSlider_sliders ORDER BY id DESC") ?: [];
+    return $wpdb->get_results("SELECT * FROM {$wpdb->prefix}KWWD_Slider_sliders ORDER BY id DESC") ?: [];
 }
 
 function KWWDSlider_get_slider(int $id) {
     global $wpdb;
-    return $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}KWWDSlider_sliders WHERE id = %d", $id));
+    return $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}KWWD_Slider_sliders WHERE id = %d", $id));
 }
 
 /******************************************************************************
@@ -226,7 +230,8 @@ function KWWDSlider_get_active_slider_settings(int $slider_id): ?object {
 
 function KWWDSlider_save_slider(array $data, int $id = 0): int {
     global $wpdb;
-    $tbl  = $wpdb->prefix . 'KWWDSlider_sliders';
+    $tbl  = $wpdb->prefix . 'KWWD_Slider_sliders';
+
     $name = sanitize_text_field(wp_unslash($data['name'] ?? ''));
     $subtitle = sanitize_text_field(wp_unslash($data['subtitle'] ?? ''));
     $ug   = (int) !empty($data['use_global']);
@@ -318,8 +323,8 @@ function KWWDSlider_delete_slider(int $id): void {
             KWWDSlider_delete_short_link($slide->short_url);
         }
     }
-    $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->prefix}KWWDSlider_sliders WHERE id = %d", $id));
-    $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->prefix}KWWDSlider_slides WHERE slider_id = %d", $id));
+    $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->prefix}KWWD_Slider_sliders WHERE id = %d", $id));
+    $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->prefix}KWWD_Slider_slides WHERE slider_id = %d", $id));
 }
 
 function KWWDSlider_delete_short_link(string $slug): void {
@@ -338,28 +343,33 @@ function KWWDSlider_delete_short_link(string $slug): void {
 function KWWDSlider_get_slides(int $slider_id): array {
     global $wpdb;
     return $wpdb->get_results($wpdb->prepare(
-        "SELECT * FROM {$wpdb->prefix}KWWDSlider_slides WHERE slider_id = %d ORDER BY slide_order ASC, id ASC",
+        "SELECT * FROM {$wpdb->prefix}KWWD_Slider_slides WHERE slider_id = %d ORDER BY slide_order ASC, id ASC",
         $slider_id
     )) ?: [];
 }
 
 function KWWDSlider_get_slide(int $id) {
     global $wpdb;
-    return $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}KWWDSlider_slides WHERE id = %d", $id));
+    return $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}KWWD_Slider_slides WHERE id = %d", $id));
 }
 
 function KWWDSlider_save_slide(array $data, int $id = 0): int {
     global $wpdb;
-    $tbl       = $wpdb->prefix . 'KWWDSlider_slides';
+    $tbl       = $wpdb->prefix . 'KWWD_Slider_slides';
     $title = sanitize_text_field(wp_unslash($data['title'] ?? ''));
     $caption = sanitize_textarea_field(wp_unslash($data['caption'] ?? ''));
     $dest      = esc_url_raw($data['dest_url'] ?? '');
     $short     = $data['short_url'] ?? '';
     $slider_id = (int)($data['slider_id'] ?? 0);
-    $UsingShortlink = KWWDSlider_has_shortlink_active();
+    $UsingShortlink = KWWDSlider_has_shortlink_active(); // If the URL Shortify Plugin is active
 
-    if ($UsingShortlink && ($dest && empty($short))) {
-        $short = KWWDSlider_create_short_link($title, $dest);
+        // grab our global settings
+    $g = KWWDSlider_get_global_settings();
+    $GeneratShortLinks = (int)$g['generate-shortlinks']; // user setting to use short URL
+    $ShortlinkPrefix = $g['shortlink-prefix'] ?? null; 
+
+    if ($UsingShortlink && ($dest && empty($short)) && $GeneratShortLinks) {
+        $short = KWWDSlider_create_short_link($title, $dest, $ShortlinkPrefix);
     }
 
     if ($id) {
@@ -411,7 +421,7 @@ function KWWDSlider_delete_slide(int $id): void {
 
 function KWWDSlider_reorder_slides(array $order): void {
     global $wpdb;
-    $tbl = $wpdb->prefix . 'KWWDSlider_slides';
+    $tbl = $wpdb->prefix . 'KWWD_Slider_slides';
     foreach ($order as $position => $slide_id) {
         $wpdb->query($wpdb->prepare("UPDATE `{$tbl}` SET slide_order = %d WHERE id = %d", (int)$position, (int)$slide_id));
     }
@@ -419,19 +429,20 @@ function KWWDSlider_reorder_slides(array $order): void {
 
 function KWWDSlider_toggle_slide(int $id, int $active): void {
     global $wpdb;
-    $wpdb->query($wpdb->prepare("UPDATE {$wpdb->prefix}KWWDSlider_slides SET active = %d WHERE id = %d", $active, $id));
+    $wpdb->query($wpdb->prepare("UPDATE {$wpdb->prefix}KWWD_Slider_slides SET active = %d WHERE id = %d", $active, $id));
 }
 
 function KWWDSlider_make_slug(string $title): string {
     $slug = strtolower(trim($title));
     $slug = preg_replace('/[^a-z0-9\s-]/', '', $slug);
     $slug = preg_replace('/[\s-]+/', '-', $slug);
-    return 'aff-' . trim($slug, '-');
+    return trim($slug, '-');
 }
 
-function KWWDSlider_create_short_link(string $title, string $dest_url): string {
+function KWWDSlider_create_short_link(string $title, string $dest_url, string $ShortlinkPrefix): string {
     global $wpdb;
     $slug       = KWWDSlider_make_slug($title);
+    $slug       = $ShortlinkPrefix.$slug; // add in the user prefix
     $now        = current_time('mysql');
     $user_id    = get_current_user_id();
     $links_tbl  = $wpdb->prefix . 'kc_us_links';
@@ -439,6 +450,7 @@ function KWWDSlider_create_short_link(string $title, string $dest_url): string {
 
     $existing = $wpdb->get_var($wpdb->prepare("SELECT id FROM `{$links_tbl}` WHERE slug = %s LIMIT 1", $slug));
     if ($existing) {
+        // That aready exists, make a unique slug
         $slug .= '-' . substr(uniqid(), -4);
     }
 

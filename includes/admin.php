@@ -3,15 +3,15 @@ defined('ABSPATH') || exit;
 
 // ── Admin Menu ────────────────────────────────────────────────────────────────
 
-add_action('admin_menu', 'KWWDSlider_slider_admin_menu');
+add_action('admin_menu', 'KWWD_Slider_admin_menu');
 
-function KWWDSlider_slider_admin_menu() {
+function KWWD_Slider_admin_menu() {
     add_menu_page(
         'Simple Sliders',
         'Simple Sliders',
         'manage_options',
         'kwwd-slider',
-        'KWWDSlider_slider_page',
+        'KWWD_Slider_page',
         'dashicons-images-alt2',
         30
     );
@@ -22,18 +22,18 @@ function KWWDSlider_slider_admin_menu() {
         'All Sliders',
         'manage_options',
         'kwwd-slider',
-        'KWWDSlider_slider_page'
+        'KWWD_Slider_page'
     );
 }
 
 // ── Admin Page Router ─────────────────────────────────────────────────────────
 
-function KWWDSlider_slider_page() {
+function KWWD_Slider_page() {
     $action = $_GET['action'] ?? 'list';
     $id     = (int) ($_GET['slider_id'] ?? 0);
 
     // Handle POST actions
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && check_admin_referer('KWWDSlider_slider_action')) {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && check_admin_referer('KWWD_Slider_action')) {
         $action_post = $_POST['KWWDSlider_action'] ?? '';
 
         if ($action_post === 'save_slider') {
@@ -106,6 +106,14 @@ function KWWDSlider_slider_page() {
 // ── CSV Bulk Upload Processing ───────────────────────────────────────────────
 
 function KWWDSlider_process_csv_upload($slider_id, $file) {
+
+    // grab our global settings
+    $g = KWWDSlider_get_global_settings();
+    $GenerateShortLinks = (int)$g['generate-shortlinks'];
+    $ShortlinkPrefix = $g['shortlink-prefix'] ?? '';
+
+    $UsingShortlink = (int)KWWDSlider_has_shortlink_active(); // If the URL Shortify Plugin is active
+
     $result = [
         'success' => false,
         'count' => 0,
@@ -129,7 +137,7 @@ function KWWDSlider_process_csv_upload($slider_id, $file) {
     // Get current max slide order for this slider
     global $wpdb;
     $max_order = (int) $wpdb->get_var($wpdb->prepare(
-        "SELECT MAX(slide_order) FROM {$wpdb->prefix}KWWDSlider_slides WHERE slider_id = %d",
+        "SELECT MAX(slide_order) FROM {$wpdb->prefix}KWWD_Slider_slides WHERE slider_id = %d",
         $slider_id
     ));
     $next_order = $max_order + 1;
@@ -217,13 +225,23 @@ function KWWDSlider_process_csv_upload($slider_id, $file) {
         }
 
         // Handle Short URL creation if needed
+
         if (empty($short_url) && !empty($dest_url)) {
-            // Call URL Shortify to create short URL
-            $short_url = KWWDSlider_create_short_url($dest_url, $slide_title);
-            if (!$short_url) {
-                $result['errors'][] = "Row {$row_number}: Failed to create short URL.";
-                continue;
-            }
+            
+            // 2. Only attempt generation if the settings allow it
+            if ($UsingShortlink && $GenerateShortLinks === 1) {
+
+                // This is where we call your updated function
+                $short_url = KWWDSlider_create_short_link($slide_title, $dest_url, $ShortlinkPrefix);
+                
+                // 3. ONLY fail the row if we specifically TRIED to generate a link and it failed
+                if (empty($short_url)) {
+                    $result['errors'][] = "Row {$row_number}: Short link generation failed.";
+                    continue; 
+                }
+            } 
+            // If $GenerateShortLinks is 0, we skip the block above. 
+            // $short_url remains an empty string, and we proceed to the save step below.
         }
 
         // Prepare slide data
@@ -258,51 +276,14 @@ function KWWDSlider_process_csv_upload($slider_id, $file) {
     return $result;
 }
 
-// ── URL Shortify Integration ──────────────────────────────────────────────────
 
-function KWWDSlider_create_short_url($dest_url, $title = '') {
-    // Check if URL Shortify plugin is active
-    if (!function_exists('WORDPRESS_PLUGIN_URL_SHORTIFY')) {
-        // Fallback: create a simple slug from title
-        $slug = sanitize_title($title);
-        if (empty($slug)) {
-            $slug = 'slide-' . substr(md5($dest_url), 0, 6);
-        }
-        
-        // You may need to adjust this based on your URL Shortify implementation
-        // This is a placeholder that returns a formatted slug
-        return $slug;
-    }
-    
-    // If URL Shortify plugin is active, use its API
-    // Adjust this based on your actual URL Shortify plugin's API
-    // Example implementation:
-    /*
-    $shortify_result = url_shortify_create_link([
-        'url' => $dest_url,
-        'title' => $title
-    ]);
-    
-    if ($shortify_result && isset($shortify_result['slug'])) {
-        return $shortify_result['slug'];
-    }
-    */
-    
-    // For now, return a simple slug
-    $slug = sanitize_title($title);
-    if (empty($slug)) {
-        $slug = 'slide-' . substr(md5($dest_url), 0, 6);
-    }
-    
-    return $slug;
-}
 
 // ── AJAX: Reorder ─────────────────────────────────────────────────────────────
 
 add_action('wp_ajax_KWWDSlider_reorder_slides', 'KWWDSlider_ajax_reorder_slides');
 
 function KWWDSlider_ajax_reorder_slides() {
-    check_ajax_referer('KWWDSlider_slider_nonce', 'nonce');
+    check_ajax_referer('KWWD_Slider_nonce', 'nonce');
     if (!current_user_can('manage_options')) wp_die('Forbidden');
     $order = $_POST['order'] ?? [];
     KWWDSlider_reorder_slides(array_map('intval', $order));
@@ -314,7 +295,7 @@ function KWWDSlider_ajax_reorder_slides() {
 add_action('wp_ajax_KWWDSlider_toggle_slide', 'KWWDSlider_ajax_toggle_slide');
 
 function KWWDSlider_ajax_toggle_slide() {
-    check_ajax_referer('KWWDSlider_slider_nonce', 'nonce');
+    check_ajax_referer('KWWD_Slider_nonce', 'nonce');
     if (!current_user_can('manage_options')) wp_die('Forbidden');
     KWWDSlider_toggle_slide((int) $_POST['slide_id'], (int) $_POST['active']);
     wp_send_json_success();
@@ -324,17 +305,18 @@ function KWWDSlider_ajax_toggle_slide() {
 
 function KWWDSlider_view_list() {
     global $wpdb;
-
     $per_page    = 20;
     $current_page = max(1, (int) ($_GET['paged'] ?? 1));
     $offset      = ($current_page - 1) * $per_page;
     $search      = sanitize_text_field(wp_unslash($_GET['s'] ?? ''));
 
     // ── Slider list with pagination ───────────────────────────────────────────
-    $total_sliders = (int) $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}KWWDSlider_sliders");
+    $TotalSQL = "SELECT COUNT(*) FROM {$wpdb->prefix}KWWD_Slider_sliders";
+    echo $TotalSQL;
+    $total_sliders = (int) $wpdb->get_var($TotalSQL);
     $total_pages   = max(1, (int) ceil($total_sliders / $per_page));
     $sliders       = $wpdb->get_results($wpdb->prepare(
-        "SELECT * FROM {$wpdb->prefix}KWWDSlider_sliders ORDER BY id DESC LIMIT %d OFFSET %d",
+        "SELECT * FROM {$wpdb->prefix}KWWD_Slider_sliders ORDER BY id DESC LIMIT %d OFFSET %d",
         $per_page, $offset
     ));
 
@@ -344,8 +326,8 @@ function KWWDSlider_view_list() {
         $like = '%' . $wpdb->esc_like($search) . '%';
         $search_results = $wpdb->get_results($wpdb->prepare(
             "SELECT sl.*, s.name AS slider_name, s.id AS slider_id
-             FROM {$wpdb->prefix}KWWDSlider_slides sl
-             JOIN {$wpdb->prefix}KWWDSlider_sliders s ON s.id = sl.slider_id
+             FROM {$wpdb->prefix}KWWD_Slider_slides sl
+             JOIN {$wpdb->prefix}KWWD_Slider_sliders s ON s.id = sl.slider_id
              WHERE sl.title LIKE %s
                 OR sl.caption LIKE %s
                 OR sl.dest_url LIKE %s
@@ -478,7 +460,7 @@ function KWWDSlider_view_list() {
             <tbody>
                 <?php foreach ($sliders as $slider):
                     $count = (int) $wpdb->get_var($wpdb->prepare(
-                        "SELECT COUNT(*) FROM {$wpdb->prefix}KWWDSlider_slides WHERE slider_id = %d", $slider->id
+                        "SELECT COUNT(*) FROM {$wpdb->prefix}KWWD_Slider_slides WHERE slider_id = %d", $slider->id
                     ));
                 ?>
                 <tr>
@@ -492,12 +474,12 @@ function KWWDSlider_view_list() {
                         <span style="color:#888" title="Using per-slider settings">⚙️ Custom</span>
                         <?php endif; ?>
                     </td>
-                    <td><code>[KWWDSlider_slider id="<?= (int) $slider->id ?>"]</code></td>
+                    <td><code>[simple_slider id="<?= (int) $slider->id ?>"]</code></td>
                     <td>
                         <a href="<?= admin_url('admin.php?page=kwwd-slider&action=edit&slider_id=' . $slider->id) ?>">Edit</a>
                         &nbsp;|&nbsp;
                         <form method="post" style="display:inline" onsubmit="return confirm('Delete this slider and all its slides?')">
-                            <?php wp_nonce_field('KWWDSlider_slider_action') ?>
+                            <?php wp_nonce_field('KWWD_Slider_action') ?>
                             <input type="hidden" name="KWWDSlider_action" value="delete_slider">
                             <input type="hidden" name="slider_id" value="<?= (int) $slider->id ?>">
                             <button type="submit" class="button-link kwwd-delete-btn">Delete</button>
@@ -572,7 +554,7 @@ function KWWDSlider_view_edit_slider(int $id) {
                     <div class="postbox-header"><h2>Slider Settings</h2></div>
                     <div class="inside">
                         <form method="post">
-                            <?php wp_nonce_field('KWWDSlider_slider_action') ?>
+                            <?php wp_nonce_field('KWWD_Slider_action') ?>
                             <input type="hidden" name="KWWDSlider_action" value="save_slider">
                             <input type="hidden" name="slider_id" value="<?= $id ?>">
 
@@ -762,6 +744,7 @@ function KWWDSlider_view_edit_slider(int $id) {
 
             <!-- RIGHT: Slides list -->
             <div class="kwwd-col-slides">
+                
                 <div class="postbox">
                     <div class="postbox-header" style="display:flex;align-items:center;justify-content:space-between;padding:.5rem 1rem">
                         <h2 style="margin:0">Slides</h2>
@@ -781,7 +764,7 @@ function KWWDSlider_view_edit_slider(int $id) {
                         <?php
                         // Shortcode bar — rendered as a reusable PHP variable so we
                         // can drop the same markup at the top and bottom of the list.
-                        $shortcode_text = '[KWWDSlider_slider id="' . $id . '"]';
+                        $shortcode_text = '[simple_slider id="' . $id . '"]';
                         $shortcode_bar  = '<p class="kwwd-shortcode-bar" style="margin:.5rem 0;display:flex;align-items:center;gap:.6rem">'
                             . '<strong>Shortcode:</strong>'
                             . '<code class="kwwd-shortcode-text" style="flex:1;padding:.3rem .5rem;background:#f0f0f0;border:1px solid #ddd;border-radius:3px;cursor:pointer"'
@@ -791,9 +774,13 @@ function KWWDSlider_view_edit_slider(int $id) {
                             . '<button type="button" class="button kwwd-copy-shortcode" data-shortcode="' . esc_attr($shortcode_text) . '">Copy</button>'
                             . '<span class="kwwd-copy-notice" style="color:#2271b1;display:none">✔ Copied!</span>'
                             . '</p>';
-                        ?>
 
-                        <?= $shortcode_bar ?>
+                            // grab our global settings
+    $g = KWWDSlider_get_global_settings();
+    $GenerateShortLinks = (int)$g['generate-shortlinks'];
+    $UsingShortlink = (int)KWWDSlider_has_shortlink_active(); // If the URL Shortify Plugin is active
+?>
+                        <?php echo $shortcode_bar; ?>
 
                         <p class="description" style="margin-top:0">Drag rows to reorder. Toggle to show/hide.</p>
                         <table class="wp-list-table widefat fixed striped" id="kwwd-slides-table">
@@ -807,9 +794,32 @@ function KWWDSlider_view_edit_slider(int $id) {
                                 </tr>
                             </thead>
                             <tbody id="kwwd-sortable">
-                                <?php foreach ($slides as $slide): 
-                                    $ShortURL = site_url().'/'.$slide->short_url;
-                                    $ShortURLLink = '<a href="'.$ShortURL.'" target="_blank" title="'.$ShortURL.'">🔗 Short URL</a>';
+                                <?php foreach ($slides as $slide):
+                                $SlideTitle = $slide->title;
+                                // Are we using short links or just main links?
+                               if(($UsingShortlink===1) && ($GenerateShortLinks===1))
+                                {
+                                    
+                                    if(empty($slide->short_url))
+                                    {
+                                        // Blank short so default to full URL
+                                        $SlideURL = $slide->dest_url;
+                                    }
+                                    else
+                                    {
+                                        $SlideURL = site_url().'/'.$slide->short_url;
+                                    }    
+                                }
+                                else
+                                {
+                                    // ELSE Use Normal URL
+                                    $SlideURL = $slide->dest_url;
+                                }
+                                $SlideURLLink = '';
+                                if(!empty($SlideURL))
+                                {
+                                $SlideURLLink = '<a href="'.$SlideURL.'" target="_blank" title="'.$SlideURL.'">🔗 Slide URL</a>';
+                                }
                                     ?>
                                 <tr data-id="<?= (int)$slide->id ?>">
                                     <td class="kwwd-handle">☰</td>
@@ -821,8 +831,13 @@ function KWWDSlider_view_edit_slider(int $id) {
                                         <?php endif; ?>
                                     </td>
                                     <td>
-                                        <?= esc_html($slide->title) ?><br>
-                                        <?= $ShortURLLink ?>
+                                        <?= esc_html($SlideTitle) ?><br>
+                                        <?php
+                                        if(!empty($SlideURLLink))
+                                        {
+                                            echo $SlideURLLink;
+                                        } 
+                                        ?>
                                     </td>
                                     <td>
                                         <label class="kwwd-toggle">
@@ -834,7 +849,7 @@ function KWWDSlider_view_edit_slider(int $id) {
                                         <a href="<?= admin_url('admin.php?page=kwwd-slider&action=slide&slider_id=' . $id . '&slide_id=' . $slide->id) ?>">Edit</a>
                                         &nbsp;|&nbsp;
                                         <form method="post" style="display:inline" onsubmit="return confirm('Delete this slide?')">
-                                            <?php wp_nonce_field('KWWDSlider_slider_action') ?>
+                                            <?php wp_nonce_field('KWWD_Slider_action') ?>
                                             <input type="hidden" name="KWWDSlider_action" value="delete_slide">
                                             <input type="hidden" name="slider_id" value="<?= $id ?>">
                                             <input type="hidden" name="slide_id" value="<?= (int)$slide->id ?>">
@@ -874,7 +889,7 @@ function KWWDSlider_view_edit_slider(int $id) {
             <p class="description">Download a <a href="<?= plugins_url('csv-template.csv', __FILE__) ?>" download>sample CSV template</a> to get started.</p>
             
             <form method="post" enctype="multipart/form-data" id="kwwd-csv-form">
-                <?php wp_nonce_field('KWWDSlider_slider_action') ?>
+                <?php wp_nonce_field('KWWD_Slider_action') ?>
                 <input type="hidden" name="KWWDSlider_action" value="bulk_upload_csv">
                 <input type="hidden" name="slider_id" value="<?= $id ?>">
                 
@@ -961,6 +976,12 @@ function KWWDSlider_view_edit_slide(int $slider_id, int $slide_id) {
         echo '<div class="wrap"><p>Slider not found.</p></div>';
         return;
     }
+
+    // grab our global settings
+    $g = KWWDSlider_get_global_settings();
+    $ShortlinkPrefix = $g['shortlink-prefix'];
+    $GenerateShortLinks = (int)$g['generate-shortlinks'];
+    $UsingShortlink = (int)KWWDSlider_has_shortlink_active();
     ?>
     <div class="wrap kwwd-admin">
         <h1><?= $slide_id ? 'Edit Slide' : 'Add Slide' ?> — <?= esc_html($slider->name) ?></h1>
@@ -969,12 +990,11 @@ function KWWDSlider_view_edit_slide(int $slider_id, int $slide_id) {
         <?php endif; ?>
 
         <form method="post" enctype="multipart/form-data">
-            <?php wp_nonce_field('KWWDSlider_slider_action') ?>
+            <?php wp_nonce_field('KWWD_Slider_action') ?>
             <input type="hidden" name="KWWDSlider_action" value="save_slide">
             <input type="hidden" name="slider_id" value="<?= $slider_id ?>">
             <input type="hidden" name="slide_id"  value="<?= $slide_id ?>">
             <input type="hidden" name="slide_order" value="<?= (int) ($slide->slide_order ?? 999) ?>">
-
             <table class="form-table">
                 <tr>
                     <th><label for="title">Slide Title</label></th>
@@ -1017,6 +1037,11 @@ function KWWDSlider_view_edit_slide(int $slider_id, int $slide_id) {
                         <p class="description">The affiliate link. A short URL will be created automatically on save.</p>
                     </td>
                 </tr>
+                <?php
+                // Show Shortlinks row if using
+                if(($UsingShortlink===1) && ($GenerateShortLinks===1))
+                {
+                ?>
                 <tr>
                     <th>Short URL</th>
                     <td>
@@ -1029,10 +1054,13 @@ function KWWDSlider_view_edit_slide(int $slider_id, int $slide_id) {
                             <?= esc_html($full_short) ?>
                         </a>
                         <?php else: ?>
-                        <em style="color:#999">Will be generated on save</em>
+                        <em style="color:#999">Will be generated on save format: <?php echo get_site_url().'/'.$ShortlinkPrefix;?>[SHORT_URL]</em>
                         <?php endif; ?>
                     </td>
                 </tr>
+                <?php
+                }
+                ?>
                 <tr>
                     <th><label for="active">Active</label></th>
                     <td>
