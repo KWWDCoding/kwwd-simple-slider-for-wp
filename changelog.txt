@@ -1,0 +1,16 @@
+CHANGELOG
+===============================================================================================================
+2026-04-17
+
+v.1.2.6 - Shortlinks per slider
+- Added in per-slider shortlink prefix admin settings
+- Normalised settings variable names
+- Added changelog.txt to keep track of changes
+
+v1.2.5 - Global Shortlink settings & Variable Cleanup
+- Changed variable names to avoid conflicts
+- Changed shortcode to simple_slider to fit branding
+- Added in using shortcode & Shortcode prefix to Admin in global settings (slider-level admin still needed)
+- Database table name change to keep consistent with overall variable name changes
+- Added in checks for global shortlink settings
+

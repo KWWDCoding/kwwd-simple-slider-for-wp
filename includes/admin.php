@@ -109,8 +109,8 @@ function KWWDSlider_process_csv_upload($slider_id, $file) {
 
     // grab our global settings
     $g = KWWDSlider_get_global_settings();
-    $GenerateShortLinks = (int)$g['generate-shortlinks'];
-    $ShortlinkPrefix = $g['shortlink-prefix'] ?? '';
+    $GenerateShortLinks = (int)$g['generate_shortlinks'];
+    $ShortlinkPrefix = $g['shortlink_prefix'] ?? '';
 
     $UsingShortlink = (int)KWWDSlider_has_shortlink_active(); // If the URL Shortify Plugin is active
 
@@ -312,7 +312,6 @@ function KWWDSlider_view_list() {
 
     // ── Slider list with pagination ───────────────────────────────────────────
     $TotalSQL = "SELECT COUNT(*) FROM {$wpdb->prefix}KWWD_Slider_sliders";
-    echo $TotalSQL;
     $total_sliders = (int) $wpdb->get_var($TotalSQL);
     $total_pages   = max(1, (int) ceil($total_sliders / $per_page));
     $sliders       = $wpdb->get_results($wpdb->prepare(
@@ -547,6 +546,12 @@ function KWWDSlider_view_edit_slider(int $id) {
         <?php endif; ?>
 
         <div class="kwwd-two-col">
+        <?php
+        // grab our global settings
+    $g = KWWDSlider_get_global_settings();
+    $GenerateShortLinks = (int)$g['generate_shortlinks'];
+    $UsingShortlink = (int)KWWDSlider_has_shortlink_active(); // If the URL Shortify Plugin is active
+    ?>
 
             <!-- LEFT: Slider settings -->
             <div class="kwwd-col-settings">
@@ -615,6 +620,19 @@ function KWWDSlider_view_edit_slider(int $id) {
                                         <td><input type="checkbox" id="loop" name="loop" value="1" <?= ($slider === null || !empty($slider->loop)) ? 'checked' : '' ?>> Enable loop</td>
                                     </tr>
                                 </table>
+                                
+                                <h3 class="kwwd-section-head">Shortlinks</h3>
+                                <table class="form-table" style="margin-top:0">
+                        <tr>
+                            <th><label for="generate_shortlinks">Auto Generate Shortlinks</label></th>
+                            <td><input type="checkbox" id="generate_shortlinks" name="generate_shortlinks" value="1" <?php if((int)$slider->generate_shortlinks===1){echo 'checked';} ?>></td>
+                        </tr>
+                         <tr>
+                            <th><label for="shortlink_prefix">Shortlink Prefix</label></th>
+                            <td><?php echo get_site_url();?>/ <input type="text" id="shortlink_prefix" name="shortlink_prefix" value="<?= esc_attr($slider->shortlink_prefix) ?>"></td>
+                        </tr>
+                        <tr><td colspan="2">Add in a forward slash or a dash if you want to separate the prefix from the link<code>Examples: go/[shortlink] or go/aff-[shortlink] or aff-[shortlink]</code></td></tr>
+        </table>
 
                                 <h3 class="kwwd-section-head">Colours</h3>
                                 <table class="form-table" style="margin-top:0">
@@ -775,10 +793,6 @@ function KWWDSlider_view_edit_slider(int $id) {
                             . '<span class="kwwd-copy-notice" style="color:#2271b1;display:none">✔ Copied!</span>'
                             . '</p>';
 
-                            // grab our global settings
-    $g = KWWDSlider_get_global_settings();
-    $GenerateShortLinks = (int)$g['generate-shortlinks'];
-    $UsingShortlink = (int)KWWDSlider_has_shortlink_active(); // If the URL Shortify Plugin is active
 ?>
                         <?php echo $shortcode_bar; ?>
 
@@ -979,8 +993,8 @@ function KWWDSlider_view_edit_slide(int $slider_id, int $slide_id) {
 
     // grab our global settings
     $g = KWWDSlider_get_global_settings();
-    $ShortlinkPrefix = $g['shortlink-prefix'];
-    $GenerateShortLinks = (int)$g['generate-shortlinks'];
+    $ShortlinkPrefix = $g['shortlink_prefix'];
+    $GenerateShortLinks = (int)$g['generate_shortlinks'];
     $UsingShortlink = (int)KWWDSlider_has_shortlink_active();
     ?>
     <div class="wrap kwwd-admin">

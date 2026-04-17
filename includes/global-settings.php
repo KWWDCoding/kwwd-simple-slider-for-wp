@@ -182,12 +182,12 @@ function KWWDSlider_global_settings_page(): void {
 
                     <table class="form-table" style="margin-top:0">
                         <tr>
-                            <th><label for="generate-shortlinks">Auto Generate Shortlinks</label></th>
-                            <td><input type="checkbox" id="generate-shortlinks" name="generate-shortlinks" value="1" <?php if((int)$g['generate-shortlinks']===1){echo 'checked';} ?>></td>
+                            <th><label for="generate_shortlinks">Auto Generate Shortlinks</label></th>
+                            <td><input type="checkbox" id="generate_shortlinks" name="generate_shortlinks" value="1" <?php if((int)$g['generate_shortlinks']===1){echo 'checked';} ?>></td>
                         </tr>
                          <tr>
-                            <th><label for="shortlink-prefix">Shortlink Prefix</label></th>
-                            <td><?php echo get_site_url();?>/ <input type="text" id="shortlink-prefix" name="shortlink-prefix" value="<?= esc_attr($g['shortlink-prefix']) ?>"></td>
+                            <th><label for="shortlink_prefix">Shortlink Prefix</label></th>
+                            <td><?php echo get_site_url();?>/ <input type="text" id="shortlink_prefix" name="shortlink_prefix" value="<?= esc_attr($g['shortlink_prefix']) ?>"></td>
                         </tr>
                         <tr><td colspan="2">Add in a forward slash or a dash if you want to separate the prefix from the link<code>Examples: go/[shortlink] or go/aff-[shortlink] or aff-[shortlink]</code></td></tr>
         </table>   

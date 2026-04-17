@@ -37,6 +37,8 @@ function KWWD_Slider_create_tables() {
             `pause_on_hover`      TINYINT(1)       NOT NULL DEFAULT 1,
             `show_arrows`         TINYINT(1)       NOT NULL DEFAULT 1,
             `show_dots`           TINYINT(1)       NOT NULL DEFAULT 1,
+            `generate_shortlinks` TINYINT(1)       NOT NULL DEFAULT 1,
+            `shortlink_prefix` VARCHAR(50)       NULL,
             `created_at`      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (`id`)
         ) $charset"
@@ -110,8 +112,8 @@ function KWWDSlider_global_defaults(): array {
         'pause_on_hover'       => '1',
         'show_arrows'          => '1',
         'show_dots'            => '1',
-        'generate-shortlinks'  => '0',
-        'shortlink-prefix'     => '',
+        'generate_shortlinks'  => '0',
+        'shortlink_prefix'     => '',
     ];
 }
 
@@ -180,8 +182,8 @@ function KWWDSlider_save_global_settings(array $raw): void {
         'pause_on_hover'      => (string)(int) !empty($raw['pause_on_hover']),
         'show_arrows'         => (string)(int) !empty($raw['show_arrows']),
         'show_dots'           => (string)(int) !empty($raw['show_dots']),
-        'generate-shortlinks' => (int)$raw['generate-shortlinks'],
-        'shortlink-prefix'    => $raw['shortlink-prefix'] ?? '',
+        'generate_shortlinks' => (int)$raw['generate_shortlinks'],
+        'shortlink_prefix'    => $raw['shortlink_prefix'] ?? '',
     ];
 
     foreach ($settings as $key => $value) {
@@ -261,6 +263,8 @@ function KWWDSlider_save_slider(array $data, int $id = 0): int {
     $poh  = (int)!empty($data['pause_on_hover'] ?? 1);
     $sa   = isset($data['show_arrows']) ? (int)!empty($data['show_arrows']) : 1;
     $sd   = isset($data['show_dots'])   ? (int)!empty($data['show_dots'])   : 1;
+    $gl = (int)$data['generate_shortlinks'];
+    $lpre = sanitize_text_field($data['shortlink_prefix']);
 
     if ($id) {
         $wpdb->query($wpdb->prepare(
@@ -272,7 +276,7 @@ function KWWDSlider_save_slider(array $data, int $id = 0): int {
              slide_border=%d, slide_border_color=%s, slide_border_radius=%d,
              transition_speed=%d, effect=%s, space_between=%d,
              centered_slides=%d, touch_swipe=%d, grab_cursor=%d,
-             pause_on_hover=%d, show_arrows=%d, show_dots=%d
+             pause_on_hover=%d, show_arrows=%d, show_dots=%d, generate_shortlinks=%d, shortlink_prefix=%s
              WHERE id=%d",
             $name, $subtitle, $ug,
             $st, $showsubtitle, $sv, $ap, $ad, $lp,
@@ -281,7 +285,7 @@ function KWWDSlider_save_slider(array $data, int $id = 0): int {
             $sb, $sbc, $sbr,
             $ts, $ef, $spb,
             $cs, $tsw, $gc,
-            $poh, $sa, $sd,
+            $poh, $sa, $sd, $gl, $lpre,
             $id
         ));
         return $id;
@@ -296,8 +300,8 @@ function KWWDSlider_save_slider(array $data, int $id = 0): int {
           slide_border, slide_border_color, slide_border_radius,
           transition_speed, effect, space_between,
           centered_slides, touch_swipe, grab_cursor,
-          pause_on_hover, show_arrows, show_dots)
-         VALUES (%s,%s,%d,%d,%d,%d,%d,%d,%d,%s,%s,%s,%s,%d,%s,%d,%d,%s,%d,%d,%s,%d,%d,%d,%d,%d,%d,%d)",
+          pause_on_hover, show_arrows, show_dots, generate_shortlinks, shortlink_prefix)
+         VALUES (%s,%s,%d,%d,%d,%d,%d,%d,%d,%s,%s,%s,%s,%d,%s,%d,%d,%s,%d,%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s)",
         $name, $subtitle, $ug,
         $st, $showsubtitle, $sv, $ap, $ad, $lp,
         $bg, $ac, $dc, $dcl,
@@ -305,7 +309,7 @@ function KWWDSlider_save_slider(array $data, int $id = 0): int {
         $sb, $sbc, $sbr,
         $ts, $ef, $spb,
         $cs, $tsw, $gc,
-        $poh, $sa, $sd
+        $poh, $sa, $sd, $gl, $lpre  
     ));
 
     return (int) $wpdb->get_var($wpdb->prepare(
@@ -361,16 +365,38 @@ function KWWDSlider_save_slide(array $data, int $id = 0): int {
     $dest      = esc_url_raw($data['dest_url'] ?? '');
     $short     = $data['short_url'] ?? '';
     $slider_id = (int)($data['slider_id'] ?? 0);
-    $UsingShortlink = KWWDSlider_has_shortlink_active(); // If the URL Shortify Plugin is active
+    $UsingShortlink = (int)KWWDSlider_has_shortlink_active(); // If the URL Shortify Plugin is active
+    $GenerateShortLinks = 0; // Default
+    $ShortlinkPrefix = '';
 
+    // Look up if using global or slider settings - only if we have plugin running!
+if($UsingShortlink===1)
+{
+
+    $SettingQuery = $wpdb->prepare("SELECT use_global, generate_shortlinks, shortlink_prefix FROM {$wpdb->prefix}KWWD_Slider_sliders WHERE id=%d", $slider_id);
+
+    $SettingResult = $wpdb->get_row($SettingQuery);
+
+    if((int)$SettingResult->use_global===0)
+    {
+        // Grab per slider settings
+        $GenerateShortLinks = (int)$SettingResult->generate_shortlinks; // user setting to use short URL
+        $ShortlinkPrefix = $SettingResult->shortlink_prefix ?? '';
+    }
+    else
+    {
         // grab our global settings
-    $g = KWWDSlider_get_global_settings();
-    $GeneratShortLinks = (int)$g['generate-shortlinks']; // user setting to use short URL
-    $ShortlinkPrefix = $g['shortlink-prefix'] ?? null; 
+        $g = KWWDSlider_get_global_settings();
+        $GenerateShortLinks = (int)$g['generate_shortlinks']; // user setting to use short URL
+        $ShortlinkPrefix = $g['shortlink_prefix'] ?? '';
+    }
+}
 
-    if ($UsingShortlink && ($dest && empty($short)) && $GeneratShortLinks) {
+    if ($UsingShortlink && ($dest && empty($short)) && $GenerateShortLinks) {
         $short = KWWDSlider_create_short_link($title, $dest, $ShortlinkPrefix);
     }
+
+
 
     if ($id) {
         $wpdb->query($wpdb->prepare(

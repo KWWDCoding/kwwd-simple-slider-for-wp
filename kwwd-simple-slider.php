@@ -3,7 +3,7 @@
  * Plugin Name: Simple Slider by KWWD
  * Plugin URI:  https://www.kwwdoc.uk/blog/Simple-Slider
  * Description: Custom image carousel slider with URL Shortify integration.
- * Version:     1.2.5
+ * Version:     1.2.6
  * Author:      KWWD
  * License:     GPL3
  * Licence URI: https://www.gnu.org/licenses/gpl-3.0.html
@@ -13,7 +13,7 @@
  */
 
 defined('ABSPATH') || exit;
-define('KWWD_Slider_VERSION', '1.2.5');
+define('KWWD_Slider_VERSION', '1.2.6');
 /**************************************************************
  * UPDATE CHECKER (GITHUB Method)
  *************************************************************/
