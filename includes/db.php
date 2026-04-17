@@ -42,7 +42,7 @@ function KWWDSlider_slider_create_tables() {
         ) $charset"
     );
 
-    // ── Global settings: key-value store ──────────────────────────────────────
+    /** Global settings: key-value store **/
     $wpdb->query(
         "CREATE TABLE IF NOT EXISTS `{$p}KWWDSlider_global_settings` (
             `setting_key`   VARCHAR(64)  NOT NULL,
@@ -70,13 +70,12 @@ function KWWDSlider_slider_create_tables() {
     );
 }
 
-// ── Global settings ───────────────────────────────────────────────────────────
-
-/**
+/********************************************************************
+ * Global settings
  * The canonical defaults for every global setting key.
  * Any key not yet saved in the DB will fall back to these values,
  * so the rest of the code always gets a fully-populated array.
- */
+ *******************************************************************/
 function KWWDSlider_global_defaults(): array {
     return [
         'show_title'           => '0',
@@ -114,10 +113,10 @@ function KWWDSlider_global_defaults(): array {
     ];
 }
 
-/**
+/********************************************************************************
  * Reads all rows from {prefix}KWWDSlider_global_settings and returns them as an
  * associative array merged over the defaults, so every key is always present.
- */
+ *******************************************************************************/
 function KWWDSlider_get_global_settings(): array {
     global $wpdb;
     $rows = $wpdb->get_results(
@@ -133,11 +132,11 @@ function KWWDSlider_get_global_settings(): array {
     return array_merge(KWWDSlider_global_defaults(), $saved);
 }
 
-/**
+/***********************************************************************************
  * Validates $raw (typically $_POST) and upserts every setting key into the
  * {prefix}KWWDSlider_global_settings table. Uses INSERT … ON DUPLICATE KEY UPDATE
  * so it works whether a key already exists or is being saved for the first time.
- */
+ **********************************************************************************/
 function KWWDSlider_save_global_settings(array $raw): void {
     global $wpdb;
     $tbl = $wpdb->prefix . 'KWWDSlider_global_settings';
@@ -170,7 +169,7 @@ function KWWDSlider_save_global_settings(array $raw): void {
         'slide_border_radius' => (string) min(50, max(0, (int)($raw['slide_border_radius'] ?? $d['slide_border_radius']))),
         // Swiper behaviour
         'transition_speed'    => (string) min(5000, max(100, (int)($raw['transition_speed'] ?? $d['transition_speed']))),
-        'effect'              => in_array($raw['effect'] ?? '', ['slide','fade','coverflow','flip'], true)
+        'effect'              => in_array($raw['effect'] ?? '', ['slide','fade','coverflow','flip','cube','cards','creative' ], true)
                                     ? $raw['effect'] : $d['effect'],
         'space_between'       => (string) min(100, max(0, (int)($raw['space_between'] ?? $d['space_between']))),
         'centered_slides'     => (string)(int) !empty($raw['centered_slides']),
@@ -191,8 +190,7 @@ function KWWDSlider_save_global_settings(array $raw): void {
     }
 }
 
-// ── Sliders ───────────────────────────────────────────────────────────────────
-
+/** Sliders **/
 function KWWDSlider_get_sliders(): array {
     global $wpdb;
     return $wpdb->get_results("SELECT * FROM {$wpdb->prefix}KWWDSlider_sliders ORDER BY id DESC") ?: [];
@@ -203,13 +201,13 @@ function KWWDSlider_get_slider(int $id) {
     return $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}KWWDSlider_sliders WHERE id = %d", $id));
 }
 
-/**
+/******************************************************************************
  * Returns the effective design settings for a slider as a plain object.
  *
  * When use_global is 1 the global settings table values override every design
  * property so the front end always reflects the master settings.
  * The slider's own name/subtitle/id are always taken from the slider row.
- */
+ *****************************************************************************/
 function KWWDSlider_get_active_slider_settings(int $slider_id): ?object {
     $slider = KWWDSlider_get_slider($slider_id);
     if (!$slider) return null;
@@ -217,7 +215,7 @@ function KWWDSlider_get_active_slider_settings(int $slider_id): ?object {
     if (!empty($slider->use_global)) {
         $g = KWWDSlider_get_global_settings(); // defined in db.php
 
-        // Overlay global values onto the slider object, keeping identity fields
+        /**  Overlay global values onto the slider object, keeping identity  **/
         foreach ($g as $key => $value) {
             $slider->$key = $value;
         }
@@ -250,7 +248,7 @@ function KWWDSlider_save_slider(array $data, int $id = 0): int {
     $sbr  = min(50, max(0, (int)($data['slide_border_radius'] ?? 4)));
     // Swiper behaviour
     $ts   = min(5000, max(100, (int)($data['transition_speed'] ?? 300)));
-    $ef   = in_array($data['effect'] ?? '', ['slide','fade','coverflow','flip'], true) ? $data['effect'] : 'slide';
+    $ef   = in_array($data['effect'] ?? '', ['slide','fade','coverflow','flip', 'cube', 'cards', 'creative'], true) ? $data['effect'] : 'slide';
     $spb  = min(100, max(0, (int)($data['space_between'] ?? 10)));
     $cs   = (int)!empty($data['centered_slides']);
     $tsw  = (int)!empty($data['touch_swipe'] ?? 1);
@@ -532,8 +530,10 @@ function KWWDSlider_resize_image(string $path): bool {
         default        => false,
     };
 
-    imagedestroy($src);
-    imagedestroy($dst);
+    //imagedestroy($src);
+    //imagedestroy($dst);
+    unset($src);
+    unset($dst);
     return (bool) $ok;
 }
 

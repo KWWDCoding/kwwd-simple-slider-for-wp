@@ -1,17 +1,17 @@
 <?php
-/**
- * WKRN Slider – Global Settings (admin UI)
+/*************************************************************************************
+ * Simple Slider by KWWD – Global Settings (admin UI)
  *
  * Data storage and retrieval is handled entirely by KWWDSlider_get_global_settings()
  * and KWWDSlider_save_global_settings() in db.php, which read/write the
  * {prefix}KWWDSlider_global_settings key-value table.
  *
  * This file registers the submenu page and renders the settings form only.
- */
+ ************************************************************************************/
 
 defined('ABSPATH') || exit;
 
-// ── Admin: register submenu ───────────────────────────────────────────────────
+/** Admin: register submenu **/
 
 add_action('admin_menu', 'KWWDSlider_global_settings_menu', 20);
 
@@ -26,7 +26,7 @@ function KWWDSlider_global_settings_menu(): void {
     );
 }
 
-// ── Admin: page renderer ──────────────────────────────────────────────────────
+/** Admin: page renderer **/
 
 function KWWDSlider_global_settings_page(): void {
 
@@ -45,7 +45,7 @@ function KWWDSlider_global_settings_page(): void {
     $g = KWWDSlider_get_global_settings();
     ?>
     <div class="wrap kwwd-admin">
-        <h1>WKRN Slider – Global Settings</h1>
+        <h1>Simple Slider by KWWD – Global Settings</h1>
         <p class="description" style="margin-bottom:1rem">
             These values are used by any slider that has <strong>Use Global Settings</strong> turned on.
             Changes here are reflected immediately on the front end — no need to re-save individual sliders.
@@ -59,7 +59,7 @@ function KWWDSlider_global_settings_page(): void {
             <?php wp_nonce_field('KWWDSlider_global_settings') ?>
             <input type="hidden" name="KWWDSlider_global_action" value="save_global">
 
-            <!-- ── Display ───────────────────────────────────────────────────── -->
+            <!-- ** Display ** -->
             <div class="postbox" style="max-width:760px">
                 <div class="postbox-header"><h2>Display</h2></div>
                 <div class="inside">
@@ -114,7 +114,7 @@ function KWWDSlider_global_settings_page(): void {
                 </div>
             </div>
 
-            <!-- ── Default Subtitle ──────────────────────────────────────────── -->
+            <!-- ** Default Subtitle ** -->
             <div class="postbox" style="max-width:760px;margin-top:1rem">
                 <div class="postbox-header"><h2>Default Subtitle</h2></div>
                 <div class="inside">
@@ -171,7 +171,7 @@ function KWWDSlider_global_settings_page(): void {
                 </div>
             </div>
 
-            <!-- ── Colours ───────────────────────────────────────────────────── -->
+            <!-- ** Colours ** -->
             <div class="postbox" style="max-width:760px;margin-top:1rem">
                 <div class="postbox-header"><h2>Colours</h2></div>
                 <div class="inside">
@@ -196,7 +196,7 @@ function KWWDSlider_global_settings_page(): void {
                 </div>
             </div>
 
-            <!-- ── Slider Border ─────────────────────────────────────────────── -->
+            <!-- ** Slider Border ** -->
             <div class="postbox" style="max-width:760px;margin-top:1rem">
                 <div class="postbox-header"><h2>Slider Border</h2></div>
                 <div class="inside">
@@ -217,7 +217,7 @@ function KWWDSlider_global_settings_page(): void {
                 </div>
             </div>
 
-            <!-- ── Slide Border ──────────────────────────────────────────────── -->
+            <!-- ** Slide Border ** -->
             <div class="postbox" style="max-width:760px;margin-top:1rem">
                 <div class="postbox-header"><h2>Slide Border</h2></div>
                 <div class="inside">
@@ -238,7 +238,7 @@ function KWWDSlider_global_settings_page(): void {
                 </div>
             </div>
 
-            <!-- ── Carousel Behaviour ────────────────────────────────────────── -->
+            <!-- ** Carousel Behaviour ** -->
             <div class="postbox" style="max-width:760px;margin-top:1rem">
                 <div class="postbox-header"><h2>Carousel Behaviour</h2></div>
                 <div class="inside">
@@ -247,7 +247,7 @@ function KWWDSlider_global_settings_page(): void {
                             <th><label for="g_effect">Transition Effect</label></th>
                             <td>
                                 <select id="g_effect" name="effect">
-                                    <?php foreach (['slide'=>'Slide','fade'=>'Fade','coverflow'=>'Coverflow','flip'=>'Flip'] as $val => $label): ?>
+                                    <?php foreach (['slide'=>'Slide','fade'=>'Fade','coverflow'=>'Coverflow','flip'=>'Flip','cube'=>'Cube','cards'=>'Cards','creative'=>'Creative'] as $val => $label): ?>
                                     <option value="<?= $val ?>" <?= $g['effect'] === $val ? 'selected' : '' ?>><?= $label ?></option>
                                     <?php endforeach; ?>
                                 </select>
@@ -305,7 +305,7 @@ function KWWDSlider_global_settings_page(): void {
                 </div>
             </div>
 
-            <!-- ── Navigation ───────────────────────────────────────────────── -->
+            <!-- ** Navigation ** -->
             <div class="postbox" style="max-width:760px;margin-top:1rem">
                 <div class="postbox-header"><h2>Navigation</h2></div>
                 <div class="inside">

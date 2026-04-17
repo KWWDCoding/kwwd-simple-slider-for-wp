@@ -1,0 +1,4 @@
+Slide Title,Image,Destination URL,Short URL,Slide Order
+Example Product 1,https://example.com/images/product1.jpg,https://amzn.to/abc123,,1
+Example Product 2,https://example.com/images/product2.jpg,https://amzn.to/def456,,2
+Example Product 3,https://example.com/images/product3.jpg,,product3-deal,3

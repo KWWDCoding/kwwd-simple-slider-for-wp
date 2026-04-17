@@ -1,4 +1,4 @@
-/* global jQuery, wkrnSlider */
+/** global jQuery, wkrnSlider **/
 jQuery(function ($) {
 
     // ── Drag to reorder ───────────────────────────────────────────────────────
@@ -27,7 +27,7 @@ jQuery(function ($) {
         $tbody.disableSelection();
     }
 
-    // ── Toggle active ─────────────────────────────────────────────────────────
+    /** Toggle active **/
     $(document).on('change', '.kwwd-active-toggle', function () {
         var $cb    = $(this);
         var id     = $cb.data('id');
@@ -45,7 +45,7 @@ jQuery(function ($) {
         });
     });
 
-    // ── Copy title to caption ─────────────────────────────────────────────────
+    /** Copy title to caption **/
     $(document).on('click', '#copy-title-to-caption', function () {
         var title = $('#title').val();
         $('#caption').val(title);

@@ -1,7 +1,7 @@
 <?php
 defined('ABSPATH') || exit;
 
-/** Admin Menu **/
+// ── Admin Menu ────────────────────────────────────────────────────────────────
 
 add_action('admin_menu', 'KWWDSlider_slider_admin_menu');
 
@@ -12,10 +12,10 @@ function KWWDSlider_slider_admin_menu() {
         'manage_options',
         'kwwd-slider',
         'KWWDSlider_slider_page',
-        'dashicons-format-gallery',
+        'dashicons-images-alt2',
         30
     );
-    /** Keep the top-level item visible as "All Sliders" in the submenu **/
+    // Keep the top-level item visible as "All Sliders" in the submenu
     add_submenu_page(
         'kwwd-slider',
         'All Sliders',
@@ -26,33 +26,13 @@ function KWWDSlider_slider_admin_menu() {
     );
 }
 
-/** Admin Page Router **/
+// ── Admin Page Router ─────────────────────────────────────────────────────────
 
 function KWWDSlider_slider_page() {
     $action = $_GET['action'] ?? 'list';
     $id     = (int) ($_GET['slider_id'] ?? 0);
 
-    // Render views
-    match ($action) {
-        'edit'   => KWWDSlider_view_edit_slider($id),
-        'new'    => KWWDSlider_view_edit_slider(0),
-        'slide'  => KWWDSlider_view_edit_slide($id, (int) ($_GET['slide_id'] ?? 0)),
-        default  => KWWDSlider_view_list(),
-    };
-}
-
-/******************************************************
- * Save/Edit/Delete slider function
- ******************************************************/
-add_action('admin_init', 'KWWDSlider_handle_admin_actions');
-
-function KWWDSlider_handle_admin_actions() {
-    // Only run if our specific action is set and we are in the admin
-    if (!isset($_POST['KWWDSlider_action']) || !is_admin()) {
-        return;
-    }
-
-// Handle POST actions
+    // Handle POST actions
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && check_admin_referer('KWWDSlider_slider_action')) {
         $action_post = $_POST['KWWDSlider_action'] ?? '';
 
@@ -88,6 +68,18 @@ function KWWDSlider_handle_admin_actions() {
             exit;
         }
 
+        if ($action_post === 'bulk_upload_csv') {
+            $slider_id = (int) ($_POST['slider_id'] ?? 0);
+            $result = KWWDSlider_process_csv_upload($slider_id, $_FILES['csv_file'] ?? null);
+            
+            if ($result['success']) {
+                wp_redirect(admin_url('admin.php?page=kwwd-slider&action=edit&slider_id=' . $slider_id . '&csv_uploaded=' . $result['count'] . '&csv_errors=' . count($result['errors'])));
+            } else {
+                wp_redirect(admin_url('admin.php?page=kwwd-slider&action=edit&slider_id=' . $slider_id . '&csv_error=' . urlencode($result['message'])));
+            }
+            exit;
+        }
+
         if ($action_post === 'delete_slider') {
             KWWDSlider_delete_slider((int) ($_POST['slider_id'] ?? 0));
             wp_redirect(admin_url('admin.php?page=kwwd-slider&deleted=1'));
@@ -101,13 +93,211 @@ function KWWDSlider_handle_admin_actions() {
             exit;
         }
     }
-    
+
+    // Render views
+    match ($action) {
+        'edit'   => KWWDSlider_view_edit_slider($id),
+        'new'    => KWWDSlider_view_edit_slider(0),
+        'slide'  => KWWDSlider_view_edit_slide($id, (int) ($_GET['slide_id'] ?? 0)),
+        default  => KWWDSlider_view_list(),
+    };
 }
 
+// ── CSV Bulk Upload Processing ───────────────────────────────────────────────
 
-/******************************************************
- * Allow AJAX reordering of slides
- *****************************************************/
+function KWWDSlider_process_csv_upload($slider_id, $file) {
+    $result = [
+        'success' => false,
+        'count' => 0,
+        'errors' => [],
+        'message' => ''
+    ];
+
+    // Validate file upload
+    if (!$file || $file['error'] !== UPLOAD_ERR_OK) {
+        $result['message'] = 'File upload failed.';
+        return $result;
+    }
+
+    // Validate file type
+    $file_ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    if ($file_ext !== 'csv') {
+        $result['message'] = 'Please upload a CSV file.';
+        return $result;
+    }
+
+    // Get current max slide order for this slider
+    global $wpdb;
+    $max_order = (int) $wpdb->get_var($wpdb->prepare(
+        "SELECT MAX(slide_order) FROM {$wpdb->prefix}KWWDSlider_slides WHERE slider_id = %d",
+        $slider_id
+    ));
+    $next_order = $max_order + 1;
+
+    // Parse CSV
+    $handle = fopen($file['tmp_name'], 'r');
+    if (!$handle) {
+        $result['message'] = 'Could not open CSV file.';
+        return $result;
+    }
+
+    // Read header row
+    $header = fgetcsv($handle);
+    if (!$header) {
+        $result['message'] = 'CSV file is empty.';
+        fclose($handle);
+        return $result;
+    }
+
+    // Normalize headers (case-insensitive, trim whitespace)
+    $header = array_map(function($h) {
+        return strtolower(trim($h));
+    }, $header);
+
+    // Expected columns
+    $expected_cols = ['slide title', 'image', 'destination url', 'short url', 'slide order'];
+    
+    $row_number = 1; // Start at 1 since we read the header
+    
+    while (($row = fgetcsv($handle)) !== false) {
+        $row_number++;
+        
+        // Skip empty rows
+        if (empty(array_filter($row))) {
+            continue;
+        }
+
+        // Map CSV columns to associative array
+        $data = [];
+        foreach ($header as $index => $col_name) {
+            $data[$col_name] = $row[$index] ?? '';
+        }
+
+        // Extract and validate fields
+        $slide_title = trim($data['slide title'] ?? '');
+        $image_url = trim($data['image'] ?? '');
+        $dest_url = trim($data['destination url'] ?? '');
+        $short_url = trim($data['short url'] ?? '');
+        $slide_order = trim($data['slide order'] ?? '');
+
+        // Validate required fields
+        if (empty($slide_title)) {
+            $result['errors'][] = "Row {$row_number}: Missing slide title.";
+            continue;
+        }
+
+        if (empty($image_url)) {
+            $result['errors'][] = "Row {$row_number}: Missing image URL.";
+            continue;
+        }
+
+        // Validate image URL
+        if (!filter_var($image_url, FILTER_VALIDATE_URL)) {
+            $result['errors'][] = "Row {$row_number}: Invalid image URL.";
+            continue;
+        }
+
+        // Validate destination URL or short URL
+        if (empty($dest_url) && empty($short_url)) {
+            $result['errors'][] = "Row {$row_number}: Must provide either Destination URL or Short URL.";
+            continue;
+        }
+
+        // Validate destination URL if provided
+        if (!empty($dest_url) && !filter_var($dest_url, FILTER_VALIDATE_URL)) {
+            $result['errors'][] = "Row {$row_number}: Invalid destination URL.";
+            continue;
+        }
+
+        // Determine slide order
+        if (!empty($slide_order) && is_numeric($slide_order)) {
+            $order = (int) $slide_order;
+        } else {
+            $order = $next_order++;
+        }
+
+        // Handle Short URL creation if needed
+        if (empty($short_url) && !empty($dest_url)) {
+            // Call URL Shortify to create short URL
+            $short_url = KWWDSlider_create_short_url($dest_url, $slide_title);
+            if (!$short_url) {
+                $result['errors'][] = "Row {$row_number}: Failed to create short URL.";
+                continue;
+            }
+        }
+
+        // Prepare slide data
+        $slide_data = [
+            'slider_id' => $slider_id,
+            'title' => $slide_title,
+            'caption' => $slide_title, // Using title as caption by default
+            'image_url' => $image_url,
+            'dest_url' => $dest_url,
+            'short_url' => $short_url,
+            'slide_order' => $order,
+            'active' => 1,
+            'attachment_id' => 0 // No attachment since we're using existing URLs
+        ];
+
+        // Save the slide
+        try {
+            KWWDSlider_save_slide($slide_data, 0);
+            $result['count']++;
+        } catch (Exception $e) {
+            $result['errors'][] = "Row {$row_number}: " . $e->getMessage();
+        }
+    }
+
+    fclose($handle);
+
+    $result['success'] = $result['count'] > 0;
+    if (!$result['success'] && empty($result['errors'])) {
+        $result['message'] = 'No valid slides found in CSV.';
+    }
+
+    return $result;
+}
+
+// ── URL Shortify Integration ──────────────────────────────────────────────────
+
+function KWWDSlider_create_short_url($dest_url, $title = '') {
+    // Check if URL Shortify plugin is active
+    if (!function_exists('WORDPRESS_PLUGIN_URL_SHORTIFY')) {
+        // Fallback: create a simple slug from title
+        $slug = sanitize_title($title);
+        if (empty($slug)) {
+            $slug = 'slide-' . substr(md5($dest_url), 0, 6);
+        }
+        
+        // You may need to adjust this based on your URL Shortify implementation
+        // This is a placeholder that returns a formatted slug
+        return $slug;
+    }
+    
+    // If URL Shortify plugin is active, use its API
+    // Adjust this based on your actual URL Shortify plugin's API
+    // Example implementation:
+    /*
+    $shortify_result = url_shortify_create_link([
+        'url' => $dest_url,
+        'title' => $title
+    ]);
+    
+    if ($shortify_result && isset($shortify_result['slug'])) {
+        return $shortify_result['slug'];
+    }
+    */
+    
+    // For now, return a simple slug
+    $slug = sanitize_title($title);
+    if (empty($slug)) {
+        $slug = 'slide-' . substr(md5($dest_url), 0, 6);
+    }
+    
+    return $slug;
+}
+
+// ── AJAX: Reorder ─────────────────────────────────────────────────────────────
 
 add_action('wp_ajax_KWWDSlider_reorder_slides', 'KWWDSlider_ajax_reorder_slides');
 
@@ -119,10 +309,7 @@ function KWWDSlider_ajax_reorder_slides() {
     wp_send_json_success();
 }
 
-
-/******************************************************
- * AJAX Toggle slide visibility on/off
- *****************************************************/
+// ── AJAX: Toggle Active ───────────────────────────────────────────────────────
 
 add_action('wp_ajax_KWWDSlider_toggle_slide', 'KWWDSlider_ajax_toggle_slide');
 
@@ -133,10 +320,7 @@ function KWWDSlider_ajax_toggle_slide() {
     wp_send_json_success();
 }
 
-
-/******************************************************
- * Page views
- *****************************************************/
+// ── Views ─────────────────────────────────────────────────────────────────────
 
 function KWWDSlider_view_list() {
     global $wpdb;
@@ -146,7 +330,7 @@ function KWWDSlider_view_list() {
     $offset      = ($current_page - 1) * $per_page;
     $search      = sanitize_text_field(wp_unslash($_GET['s'] ?? ''));
 
-    /** Slider list with pagination **/
+    // ── Slider list with pagination ───────────────────────────────────────────
     $total_sliders = (int) $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}KWWDSlider_sliders");
     $total_pages   = max(1, (int) ceil($total_sliders / $per_page));
     $sliders       = $wpdb->get_results($wpdb->prepare(
@@ -154,7 +338,7 @@ function KWWDSlider_view_list() {
         $per_page, $offset
     ));
 
-    /**Slide search **/
+    // ── Slide search ──────────────────────────────────────────────────────────
     $search_results = [];
     if ($search !== '') {
         $like = '%' . $wpdb->esc_like($search) . '%';
@@ -173,7 +357,7 @@ function KWWDSlider_view_list() {
     $base_url = admin_url('admin.php?page=kwwd-slider');
     ?>
     <div class="wrap kwwd-admin">
-        <h1 class="wp-heading-inline">Simple Sliders by KWWD</h1>
+        <h1 class="wp-heading-inline">WKRN Sliders</h1>
         <a href="<?= admin_url('admin.php?page=kwwd-slider&action=new') ?>" class="page-title-action">Add New</a>
 
         <?php if (isset($_GET['deleted'])): ?>
@@ -308,7 +492,7 @@ function KWWDSlider_view_list() {
                         <span style="color:#888" title="Using per-slider settings">⚙️ Custom</span>
                         <?php endif; ?>
                     </td>
-                    <td><code>[simple_slider id="<?= (int) $slider->id ?>"]</code></td>
+                    <td><code>[KWWDSlider_slider id="<?= (int) $slider->id ?>"]</code></td>
                     <td>
                         <a href="<?= admin_url('admin.php?page=kwwd-slider&action=edit&slider_id=' . $slider->id) ?>">Edit</a>
                         &nbsp;|&nbsp;
@@ -367,6 +551,18 @@ function KWWDSlider_view_edit_slider(int $id) {
         <h1><?= $id ? 'Edit Slider' : 'New Slider' ?></h1>
         <?php if (isset($_GET['saved'])): ?><div class="notice notice-success is-dismissible"><p>Saved successfully.</p></div><?php endif; ?>
         <?php if (isset($_GET['deleted'])): ?><div class="notice notice-success is-dismissible"><p>Slide deleted.</p></div><?php endif; ?>
+        <?php if (isset($_GET['csv_uploaded'])): ?>
+        <div class="notice notice-success is-dismissible">
+            <p><strong>CSV Import Complete!</strong> Successfully imported <?= (int)$_GET['csv_uploaded'] ?> slide(s).
+            <?php if (isset($_GET['csv_errors']) && (int)$_GET['csv_errors'] > 0): ?>
+                <br><em><?= (int)$_GET['csv_errors'] ?> row(s) had errors and were skipped.</em>
+            <?php endif; ?>
+            </p>
+        </div>
+        <?php endif; ?>
+        <?php if (isset($_GET['csv_error'])): ?>
+        <div class="notice notice-error is-dismissible"><p><?= esc_html(urldecode($_GET['csv_error'])) ?></p></div>
+        <?php endif; ?>
 
         <div class="kwwd-two-col">
 
@@ -385,7 +581,7 @@ function KWWDSlider_view_edit_slider(int $id) {
                                     <th><label for="name">Slider Name</label></th>
                                     <td><input type="text" id="name" name="name" class="regular-text" value="<?= esc_attr($slider->name ?? '') ?>" required></td>
                                 </tr>
-                                <!-- ── Use Global Settings toggle **/ -->
+                                <!-- ── Use Global Settings toggle ─────────── -->
                                 <tr>
                                     <th><label for="use_global">Use Global Settings</label></th>
                                     <td>
@@ -496,7 +692,7 @@ function KWWDSlider_view_edit_slider(int $id) {
                                         <th><label for="effect">Transition Effect</label></th>
                                         <td>
                                             <select id="effect" name="effect">
-                                                <?php foreach (['slide'=>'Slide','fade'=>'Fade','coverflow'=>'Coverflow','flip'=>'Flip','cards'=>'Cards','cube'=>'Cube','creative'=>'Creative'] as $val => $label): ?>
+                                                <?php foreach (['slide'=>'Slide','fade'=>'Fade','coverflow'=>'Coverflow','flip'=>'Flip'] as $val => $label): ?>
                                                 <option value="<?= $val ?>" <?= ($slider->effect ?? 'slide') === $val ? 'selected' : '' ?>><?= $label ?></option>
                                                 <?php endforeach; ?>
                                             </select>
@@ -570,19 +766,22 @@ function KWWDSlider_view_edit_slider(int $id) {
                     <div class="postbox-header" style="display:flex;align-items:center;justify-content:space-between;padding:.5rem 1rem">
                         <h2 style="margin:0">Slides</h2>
                         <?php if ($id): ?>
-                        <a href="<?= admin_url('admin.php?page=kwwd-slider&action=slide&slider_id=' . $id) ?>" class="button button-primary">+ Add Slide</a>
+                        <div style="display:flex;gap:.5rem">
+                            <a href="<?= admin_url('admin.php?page=kwwd-slider&action=slide&slider_id=' . $id) ?>" class="button button-primary">+ Add Slide</a>
+                            <button type="button" class="button" id="kwwd-bulk-upload-btn">📁 Bulk Upload CSV</button>
+                        </div>
                         <?php endif; ?>
                     </div>
                     <div class="inside">
                         <?php if (!$id): ?>
                         <p class="description">Save the slider first, then add slides.</p>
                         <?php elseif (empty($slides)): ?>
-                        <p>No slides yet. <a href="<?= admin_url('admin.php?page=kwwd-slider&action=slide&slider_id=' . $id) ?>">Add the first slide</a>.</p>
+                        <p>No slides yet. <a href="<?= admin_url('admin.php?page=kwwd-slider&action=slide&slider_id=' . $id) ?>">Add the first slide</a> or use the Bulk Upload CSV button above.</p>
                         <?php else: ?>
                         <?php
                         // Shortcode bar — rendered as a reusable PHP variable so we
                         // can drop the same markup at the top and bottom of the list.
-                        $shortcode_text = '[simple_slider id="' . $id . '"]';
+                        $shortcode_text = '[KWWDSlider_slider id="' . $id . '"]';
                         $shortcode_bar  = '<p class="kwwd-shortcode-bar" style="margin:.5rem 0;display:flex;align-items:center;gap:.6rem">'
                             . '<strong>Shortcode:</strong>'
                             . '<code class="kwwd-shortcode-text" style="flex:1;padding:.3rem .5rem;background:#f0f0f0;border:1px solid #ddd;border-radius:3px;cursor:pointer"'
@@ -659,20 +858,54 @@ function KWWDSlider_view_edit_slider(int $id) {
         <p><a href="<?= admin_url('admin.php?page=kwwd-slider') ?>">&larr; Back to Sliders</a></p>
     </div>
 
+    <!-- CSV Bulk Upload Modal -->
+    <?php if ($id): ?>
+    <div id="kwwd-csv-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:100000;align-items:center;justify-content:center">
+        <div style="background:#fff;padding:2rem;border-radius:8px;max-width:600px;width:90%">
+            <h2 style="margin-top:0">Bulk Upload Slides from CSV</h2>
+            <p>Upload a CSV file with the following columns:</p>
+            <ul style="line-height:1.8">
+                <li><strong>Slide Title</strong> (required)</li>
+                <li><strong>Image</strong> (required - full URL to existing image)</li>
+                <li><strong>Destination URL</strong> (affiliate link - optional if Short URL provided)</li>
+                <li><strong>Short URL</strong> (optional - will be created automatically if blank)</li>
+                <li><strong>Slide Order</strong> (optional - numeric position)</li>
+            </ul>
+            <p class="description">Download a <a href="<?= plugins_url('csv-template.csv', __FILE__) ?>" download>sample CSV template</a> to get started.</p>
+            
+            <form method="post" enctype="multipart/form-data" id="kwwd-csv-form">
+                <?php wp_nonce_field('KWWDSlider_slider_action') ?>
+                <input type="hidden" name="KWWDSlider_action" value="bulk_upload_csv">
+                <input type="hidden" name="slider_id" value="<?= $id ?>">
+                
+                <p>
+                    <input type="file" name="csv_file" id="csv_file" accept=".csv" required style="width:100%">
+                </p>
+                
+                <div style="display:flex;gap:1rem;justify-content:flex-end;margin-top:1.5rem">
+                    <button type="button" class="button" id="kwwd-csv-cancel">Cancel</button>
+                    <button type="submit" class="button button-primary">Upload & Import</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <script>
     (function () {
-        /** Use Global Settings: hide/show per-slider design fields **/
+        // ── Use Global Settings: hide/show per-slider design fields ───────────
         var checkbox = document.getElementById('use_global');
         var panel    = document.getElementById('kwwd-per-slider-settings');
 
-        function toggle() {
-            panel.style.display = checkbox.checked ? 'none' : '';
+        if (checkbox && panel) {
+            function toggle() {
+                panel.style.display = checkbox.checked ? 'none' : '';
+            }
+            toggle();
+            checkbox.addEventListener('change', toggle);
         }
 
-        toggle();
-        checkbox.addEventListener('change', toggle);
-
-        /** Shortcode: copy to clipboard on button or code click **/
+        // ── Shortcode: copy to clipboard on button or code click ──────────────
         document.addEventListener('click', function (e) {
             // Match either the Copy button or the <code> element itself
             var btn = e.target.closest('.kwwd-copy-shortcode, .kwwd-shortcode-text');
@@ -687,6 +920,34 @@ function KWWDSlider_view_edit_slider(int $id) {
                 setTimeout(function () { notice.style.display = 'none'; }, 2000);
             });
         });
+
+        // ── CSV Bulk Upload Modal ──────────────────────────────────────────────
+        var bulkBtn = document.getElementById('kwwd-bulk-upload-btn');
+        var modal = document.getElementById('kwwd-csv-modal');
+        var cancelBtn = document.getElementById('kwwd-csv-cancel');
+
+        if (bulkBtn && modal) {
+            bulkBtn.addEventListener('click', function() {
+                modal.style.display = 'flex';
+            });
+        }
+
+        if (cancelBtn && modal) {
+            cancelBtn.addEventListener('click', function() {
+                modal.style.display = 'none';
+                document.getElementById('csv_file').value = '';
+            });
+        }
+
+        // Close modal on outside click
+        if (modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                    document.getElementById('csv_file').value = '';
+                }
+            });
+        }
     })();
     </script>
     <?php

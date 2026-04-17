@@ -5,7 +5,7 @@
 .kwwd-handle { color: #aaa; font-size: 1.1rem; cursor: grab;}
 .kwwd-no-image { color: #aaa; font-style: italic; font-size: .85rem; }
 
-/* Toggle switch */
+/** Toggle switch **/
 .kwwd-toggle {
     position: relative;
     display: inline-block;
@@ -35,14 +35,14 @@
 .kwwd-toggle input:checked + .kwwd-toggle-slider { background: #2271b1; }
 .kwwd-toggle input:checked + .kwwd-toggle-slider::before { transform: translateX(16px); }
 
-/* Sortable placeholder */
+/** Sortable placeholder **/
 .kwwd-sortable-placeholder {
     background: #f0f6fc;
     border: 2px dashed #2271b1;
     height: 40px;
 }
 
-/* ── Two-column layout ───────────────────────────────────────────────────── */
+/** Two-column layout **/
 .kwwd-two-col {
     display: flex;
     gap: 1.5rem;

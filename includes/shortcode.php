@@ -8,8 +8,10 @@ function KWWDSlider_slider_shortcode(array $atts): string {
     $id     = (int) $atts['id'];
     if (!$id) return '<!-- KWWDSlider_slider: no id provided -->';
 
-    // Returns the slider row with design fields overridden by global settings
-    // if the slider's use_global flag is set — otherwise returns per-slider values.
+    /********************************************************************************* 
+     * Returns the slider row with design fields overridden by global settings
+     * if the slider's use_global flag is set — otherwise returns per-slider values.
+     *********************************************************************************/
     $slider = KWWDSlider_get_active_slider_settings($id);
     if (!$slider) return '<!-- KWWDSlider_slider: slider not found -->';
 
@@ -18,7 +20,7 @@ function KWWDSlider_slider_shortcode(array $atts): string {
 
     $uid = 'kwwd-swiper-' . $id;
 
-    // Build inline CSS variables for this slider instance
+    /**  Build inline CSS variables for this slider instance **/
     $css = implode(';', array_filter([
         '--kwwd-bg:'         . esc_attr($slider->bg_color),
         '--kwwd-arrow:'      . esc_attr($slider->arrow_color),
@@ -37,8 +39,10 @@ function KWWDSlider_slider_shortcode(array $atts): string {
         <h3 class="kwwd-slider-title"><?= esc_html($slider->name) ?></h3>
         <?php endif; ?>
         <?php if ($slider->show_subtitle):
-            // When using global settings the subtitle text and styling come from
-            // wp_options; per-slider mode just renders the slider's own subtitle plainly.
+            /******************************************************************************
+             * When using global settings the subtitle text and styling come from
+             * wp_options; per-slider mode just renders the slider's own subtitle plainly.
+             *******************************************************************************/
             if (!empty($slider->use_global)) {
                 $g = KWWDSlider_get_global_settings();
                 $subtitle_text = $g['subtitle'];
@@ -89,11 +93,10 @@ function KWWDSlider_slider_shortcode(array $atts): string {
                 <div class="swiper-slide kwwd-slide">
                     <?php if ($link): ?>
                     <a href="<?= esc_url($link) ?>" target="_blank" rel="nofollow sponsored noopener">
-                    <?php endif; ?>
+                    <?php endif; ?>    
                         <img src="<?= esc_url($slide->image_url) ?>"
                              alt="<?= esc_attr($slide->title) ?>"
                              loading="lazy"
-                             width="<?= KWWDSlider_IMG_MAX_WIDTH ?>"
                              height="<?= KWWDSlider_IMG_MAX_HEIGHT ?>">
                         <?php if (!empty($slide->caption)): ?>
                         <p class="kwwd-caption"><?= esc_html($slide->caption) ?></p>

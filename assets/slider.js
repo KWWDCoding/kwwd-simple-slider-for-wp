@@ -4,12 +4,14 @@ document.addEventListener('DOMContentLoaded', function () {
         var autoplay      = el.dataset.autoplay === '1';
         var delay         = parseInt(el.dataset.autoplayDelay) || 3000;
         var loop          = el.dataset.loop === '1';
+        var effect        = el.dataset.effect || 'slide';
 
         new Swiper(el, {
             slidesPerView:  slidesVisible,
             spaceBetween:   12,
             loop:           loop,
             grabCursor:     true,
+            effect:         effect,
             pagination: {
                 el:        '.swiper-pagination',
                 clickable: true,
