@@ -1,5 +1,11 @@
 CHANGELOG
 ===============================================================================================================
+2026-04-30
+
+v.1.2.7 - Minor text fixes
+- Added in Plugin Author URL
+- Fixed broken plugin link
+
 2026-04-17
 
 v.1.2.6 - Shortlinks per slider

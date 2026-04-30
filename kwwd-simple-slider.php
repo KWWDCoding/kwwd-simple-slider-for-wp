@@ -1,10 +1,11 @@
 <?php
 /**
  * Plugin Name: Simple Slider by KWWD
- * Plugin URI:  https://www.kwwdoc.uk/blog/Simple-Slider
+ * Plugin URI:  https://kwwdcoding.github.io/kwwd-simple-slider/index.html
  * Description: Custom image carousel slider with URL Shortify integration.
- * Version:     1.2.6
+ * Version:     1.2.7
  * Author:      KWWD
+ * Author URI:  https://www.kwwd.co.uk/
  * License:     GPL3
  * Licence URI: https://www.gnu.org/licenses/gpl-3.0.html
  * Requires at least: 6.0
@@ -13,7 +14,7 @@
  */
 
 defined('ABSPATH') || exit;
-define('KWWD_Slider_VERSION', '1.2.6');
+define('KWWD_Slider_VERSION', '1.2.7');
 /**************************************************************
  * UPDATE CHECKER (GITHUB Method)
  *************************************************************/
